@@ -1,7 +1,6 @@
 from typing import Tuple
-import numpy as np
 
-from svd import SVD
+import numpy as np
 
 
 def vec(matrix: np.ndarray) -> np.ndarray:
@@ -27,7 +26,8 @@ def massage(matrix: np.ndarray, shape_a: Tuple[int, int]) -> np.ndarray:
     :param shape_a: shape of matrix A
     :return: 2D matrix
     """
-    return matrix.reshape((-1, shape_a[1], shape_a[0]), order='F').reshape(shape_a[1], -1)
+    return np.vstack(
+        [vec(block) for col in np.split(matrix, shape_a[1], axis=1) for block in np.split(col, shape_a[0], 0)])
 
 
 def compute_shapes(shape: Tuple[int, int]) -> Tuple[Tuple[int, int], Tuple[int, int]]:
@@ -61,16 +61,16 @@ def compute_shapes(shape: Tuple[int, int]) -> Tuple[Tuple[int, int], Tuple[int, 
     return (m1, n1), (m2, n2)
 
 
-def kronecker_decomposition(svd: SVD,
-                            shape_a: Tuple[int, int],
-                            shape_b: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray]:
+def kronecker_decomposition(matrix: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
-    :param svd: SVD object
-    :param shape_a: shape of matrix A
-    :param shape_b: shape of matrix B
+    :param matrix: 2D matrix
     :return: A: 2D matrix, B: 2D matrix
     """
-    u_mat, s_vec, vh_mat = svd.U, svd.s, svd.VH
+    shape_a, shape_b = compute_shapes(matrix.shape)
+    massaged_matrix = massage(matrix, shape_a)
+    print("Computing SVD...")
+    u_mat, s_vec, vh_mat = np.linalg.svd(massaged_matrix, full_matrices=False)
+    print("Done.")
     v_mat = vh_mat.transpose()
     sqrt_s = np.sqrt(s_vec[0])
     a_mat = reshape(u_mat[:, 0], shape_a) * sqrt_s

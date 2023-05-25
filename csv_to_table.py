@@ -19,13 +19,14 @@ def parse_args() -> dict:
     if not args['input'].endswith('.csv'):
         raise ValueError("Input must be a CSV file")
 
+    # Table name must be a valid SQL identifier
+    if not args['table'].isidentifier():
+        raise ValueError("Table name must be a valid SQL identifier")
+
     return args
 
 
 if __name__ == '__main__':
     args = parse_args()
-    input = args['input']
-    table = args['table']
-    database = args['database']
     connection = duckdb.connect(args['database'])
-    csv_to_table(connection, input, table)
+    csv_to_table(connection, args['input'], args['table'])

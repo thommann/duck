@@ -4,6 +4,16 @@ import cv2
 import numpy as np
 
 
+def image_to_csv(input_path: str, output_path: str, dimensions: tuple) -> None:
+    img = cv2.imread(input_path)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    img = cv2.resize(img, (dimensions[1], dimensions[0]))
+
+    matrix = np.array(img, dtype=np.float32)
+    matrix += np.random.random(matrix.shape)
+    np.savetxt(output_path, matrix, delimiter=',')
+
+
 def parse_args() -> dict:
     parser = argparse.ArgumentParser(description="Image to csv converter")
     parser.add_argument("--input", type=str, required=True, help="Path to the input image")
@@ -28,12 +38,4 @@ def parse_args() -> dict:
 
 if __name__ == '__main__':
     args = parse_args()
-    input_path = args['input']
-    output_path = args['output']
-    dimensions = args['dimensions']
-    img = cv2.imread(input_path)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    img = cv2.resize(img, (dimensions[1], dimensions[0]))
-    matrix = np.array(img, dtype=np.float32)
-    matrix += np.random.random(matrix.shape)
-    np.savetxt(output_path, matrix, delimiter=',')
+    image_to_csv(args['input'], args['output'], args['dimensions'])
