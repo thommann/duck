@@ -6,38 +6,17 @@ import numpy as np
 
 def parse_args() -> dict:
     parser = argparse.ArgumentParser(description="Image to csv converter")
-    parser.add_argument(
-        "--input",
-        type=str,
-        required=True,
-        help="Path to the input image",
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        required=False,
-        default=None,
-        help="Path to the output csv file",
-    )
-    parser.add_argument(
-        "--dimensions",
-        type=int,
-        nargs=2,
-        required=True,
-        help="Dimensions of the output matrix",
-    )
-
+    parser.add_argument("--input", type=str, required=True, help="Path to the input image")
+    parser.add_argument("--output", type=str, required=True, help="Path to the output csv file")
+    parser.add_argument("--dimensions", type=int, nargs=2, required=True, help="Dimensions of the output matrix")
     args = vars(parser.parse_args())
 
     # Input mus be png or jpg
-    if args['input'][-4:] not in ['.png', '.jpg']:
+    if not args['input'].endswith('.png') and not args['input'].endswith('.jpg'):
         raise ValueError('Input must be a png or jpg file')
 
-    # If output is not specified, it will be the same as input
-    if args['output'] is None:
-        args['output'] = args['input'][:-4] + '.csv'
     # Output must be a csv file
-    elif args['output'][-4:] != '.csv':
+    if not args['output'].endswith('.csv'):
         raise ValueError('Output must be a csv file')
 
     # Dimensions must be a tuple of 2 integers
