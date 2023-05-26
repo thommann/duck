@@ -3,3 +3,6 @@ venv
 
 data/databases/*
 !data/databases/.gitkeep
+
+data/matrices/*
+!data/matrices/.gitkeep
