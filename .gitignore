@@ -1,4 +1,7 @@
-.idea
+**/.*
+!.gitkeep
+!.gitignore
+
 venv
 
 data/databases/*
