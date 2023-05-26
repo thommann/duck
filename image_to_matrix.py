@@ -9,8 +9,9 @@ def image_to_matrix(input_path: str, output_path: str, dimensions: tuple) -> Non
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.resize(img, (dimensions[1], dimensions[0]))
 
-    matrix = np.array(img, dtype=np.float32)
-    matrix += np.random.random(matrix.shape) * 100
+    matrix = np.array(img, dtype=np.float32) / 255  # Normalize
+    matrix = matrix * 100  # Scale
+    matrix += np.random.random(matrix.shape) * 10  # Add noise
     np.savetxt(output_path, matrix, delimiter=',')
 
 
