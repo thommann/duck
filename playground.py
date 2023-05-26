@@ -1,18 +1,32 @@
-from profiling import query_results, query_profiling
+from profiling import print_error_and_speedup
 
-original_query = """
-SELECT SUM(column0) AS result FROM original;
+name = "webb"
+dimensions = 1_000_000, 100
+
+database = f"data/databases/{name}.db"
+original = f"{name}_{dimensions[0]}x{dimensions[1]}"
+matrix_a = f"{original}_a"
+matrix_b = f"{original}_b"
+
+original_sum = f"""
+SELECT SUM(column00) AS result FROM {original};
 """
 
-kronecker_query = """
+kronecker_sum = f"""
 SELECT
-(SELECT SUM(column0) FROM matrix_a) * 
-(SELECT SUM(column0) FROM matrix_b) AS result;
+(SELECT SUM(column0) FROM {matrix_a}) * 
+(SELECT SUM(column0) FROM {matrix_b}) AS result;
 """
 
-database = "data/databases/webb.db"
-original_result, kronecker_result = query_results(original_query, kronecker_query, database)
-print(f"Error: {abs((original_result - kronecker_result) / original_result):.2%}")
+original_sumproduct = f"""
+SELECT SUM(column00 * column01) AS result FROM {original};
+"""
 
-original_time, kronecker_time = query_profiling(original_query, kronecker_query, database)
-print(f"Speedup: {original_time / kronecker_time:.1f}x")
+kronecker_sumproduct = f"""
+SELECT
+(SELECT SUM(column0 * column0) FROM {matrix_a}) * 
+(SELECT SUM(column0 * column1) FROM {matrix_b}) AS result;
+"""
+
+print_error_and_speedup(original_sum, kronecker_sum, database)
+print_error_and_speedup(original_sumproduct, kronecker_sumproduct, database)

@@ -10,7 +10,7 @@ def image_to_matrix(input_path: str, output_path: str, dimensions: tuple) -> Non
     img = cv2.resize(img, (dimensions[1], dimensions[0]))
 
     matrix = np.array(img, dtype=np.float32)
-    matrix += np.random.random(matrix.shape)
+    matrix += np.random.random(matrix.shape) * 100
     np.savetxt(output_path, matrix, delimiter=',')
 
 

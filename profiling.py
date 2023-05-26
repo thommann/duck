@@ -6,8 +6,16 @@ import duckdb
 config = """
 PRAGMA enable_profiling='json';
 PRAGMA profile_output='.temp';
-PRAGMA threads=4;
+PRAGMA threads=12;
 """
+
+
+def print_error_and_speedup(original_query: str, kronecker_query: str, database: str):
+    original_result, kronecker_result = query_results(original_query, kronecker_query, database)
+    print(f"Error: {abs((original_result - kronecker_result) / original_result):.2%}")
+
+    original_time, kronecker_time = query_profiling(original_query, kronecker_query, database)
+    print(f"Speedup: {original_time / kronecker_time:.1f}x")
 
 
 def query_results(original_query: str, kronecker_query: str, database: str) -> tuple[float, float]:
