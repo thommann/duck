@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 
-def image_to_csv(input_path: str, output_path: str, dimensions: tuple) -> None:
+def image_to_matrix(input_path: str, output_path: str, dimensions: tuple) -> None:
     img = cv2.imread(input_path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.resize(img, (dimensions[1], dimensions[0]))
@@ -38,4 +38,4 @@ def parse_args() -> dict:
 
 if __name__ == '__main__':
     args = parse_args()
-    image_to_csv(args['input'], args['output'], args['dimensions'])
+    image_to_matrix(args['input'], args['output'], args['dimensions'])

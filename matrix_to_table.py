@@ -3,9 +3,9 @@ import argparse
 import duckdb
 
 
-def csv_to_table(connection: duckdb.DuckDBPyConnection, filepath: str, name: str) -> None:
-    connection.sql(f"DROP TABLE IF EXISTS {name}")
-    connection.sql(f"CREATE TABLE {name} AS SELECT * FROM '{filepath}'")
+def matrix_to_table(connection: duckdb.DuckDBPyConnection, filepath: str, name: str) -> None:
+    connection.execute(f"DROP TABLE IF EXISTS {name}")
+    connection.execute(f"CREATE TABLE {name} AS SELECT * FROM '{filepath}'")
 
 
 def parse_args() -> dict:
@@ -29,4 +29,4 @@ def parse_args() -> dict:
 if __name__ == '__main__':
     args = parse_args()
     connection = duckdb.connect(args['database'])
-    csv_to_table(connection, args['input'], args['table'])
+    matrix_to_table(connection, args['input'], args['table'])

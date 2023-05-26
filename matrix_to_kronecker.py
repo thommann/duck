@@ -5,7 +5,7 @@ import numpy as np
 from kronecker import kronecker_decomposition
 
 
-def csv_to_kronecker(input: str, output_a: str, output_b: str) -> None:
+def matrix_to_kronecker(input: str, output_a: str, output_b: str) -> None:
     matrix = np.loadtxt(input, delimiter=',')
     a_mat, b_mat = kronecker_decomposition(matrix)
     np.savetxt(output_a, a_mat, delimiter=',')
@@ -34,4 +34,4 @@ def parse_args() -> dict:
 
 if __name__ == '__main__':
     args = parse_args()
-    csv_to_kronecker(args['input'], args['output_a'], args['output_b'])
+    matrix_to_kronecker(args['input'], args['output_a'], args['output_b'])

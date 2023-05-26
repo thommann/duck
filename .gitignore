@@ -6,3 +6,6 @@ data/databases/*
 
 data/matrices/*
 !data/matrices/.gitkeep
+
+data/profiles/*
+!data/profiles/.gitkeep

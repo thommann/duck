@@ -2,18 +2,18 @@ import argparse
 
 import duckdb
 
-from csv_to_table import csv_to_table
+from matrix_to_table import matrix_to_table
 
 
-def matrices_to_db(name, name_a, name_b, input, input_a, input_b, db_name) -> None:
+def kronecker_to_db(name, name_a, name_b, input, input_a, input_b, db_name) -> None:
     """
     This function takes the name of the matrices, the matrices themselves, and the name of the database
     and inserts the matrices into the database.
     """
     con = duckdb.connect(db_name)
-    csv_to_table(con, input, name)
-    csv_to_table(con, input_a, name_a)
-    csv_to_table(con, input_b, name_b)
+    matrix_to_table(con, input, name)
+    matrix_to_table(con, input_a, name_a)
+    matrix_to_table(con, input_b, name_b)
     con.close()
 
 
@@ -57,6 +57,6 @@ def parse_args() -> dict:
 
 if __name__ == "__main__":
     args = parse_args()
-    matrices_to_db(args["table"], args["table_a"], args["table_b"],
-                   args["input"], args["input_a"], args["input_b"],
-                   args["database"])
+    kronecker_to_db(args["table"], args["table_a"], args["table_b"],
+                    args["input"], args["input_a"], args["input_b"],
+                    args["database"])
