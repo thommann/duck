@@ -2,8 +2,8 @@ import numpy as np
 
 from bench import bench
 
-rows = [2 ** x for x in range(1, 24 + 1)]
-cols = [2 ** x for x in range(1, 6 + 1)]
+rows = [2 ** x for x in range(2, 24 + 1)]
+cols = [2 ** x for x in range(0, 6 + 1)]
 
 name = 'webb'
 
