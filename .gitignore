@@ -12,3 +12,6 @@ data/matrices/*
 
 data/profiles/*
 !data/profiles/.gitkeep
+
+*.log
+*.pid
