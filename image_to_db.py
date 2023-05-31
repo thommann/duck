@@ -6,10 +6,11 @@ from matrix_to_kronecker import matrix_to_kronecker
 
 
 def image_to_db(input_path: str, dimensions: tuple, name: str) -> None:
-    original = f"data/matrices/{name}_{dimensions[0]}x{dimensions[1]}.csv"
+    full_name = f"{name}_{dimensions[0]}x{dimensions[1]}"
+    original = f"data/matrices/{full_name}.csv"
     matrix_a = f"{original[:-4]}_a.csv"
     matrix_b = f"{original[:-4]}_b.csv"
-    database = f"data/databases/{name}.db"
+    database = f"data/databases/{full_name}.db"
     image_to_matrix(input_path, original, dimensions)
     matrix_to_kronecker(original, matrix_a, matrix_b)
     kronecker_to_db(original, matrix_a, matrix_b, database)

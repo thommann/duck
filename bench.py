@@ -10,8 +10,9 @@ def bench(name: str, dimensions: tuple[int, int]) -> tuple[float, float, float, 
     :param dimensions:
     :return: Returns the error and speedup of the Kronecker sum and sumproduct algorithms.
     """
-    database = f"data/databases/{name}.db"
-    original = f"{name}_{dimensions[0]}x{dimensions[1]}"
+    full_name = f"{name}_{dimensions[0]}x{dimensions[1]}"
+    database = f"data/databases/{full_name}.db"
+    original = full_name
     matrix_a = f"{original}_a"
     matrix_b = f"{original}_b"
 
