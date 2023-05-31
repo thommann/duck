@@ -3,7 +3,13 @@ import argparse
 from profiling import print_error_and_speedup
 
 
-def bench(name: str, dimensions: tuple[int, int]):
+def bench(name: str, dimensions: tuple[int, int]) -> tuple[float, float, float, float]:
+    """
+    Compute the error and speedup of the Kronecker sum and sumproduct algorithms compared to the original algorithm.
+    :param name:
+    :param dimensions:
+    :return: Returns the error and speedup of the Kronecker sum and sumproduct algorithms.
+    """
     database = f"data/databases/{name}.db"
     original = f"{name}_{dimensions[0]}x{dimensions[1]}"
     matrix_a = f"{original}_a"
@@ -31,8 +37,10 @@ def bench(name: str, dimensions: tuple[int, int]):
     (SELECT SUM(column0 * column1) FROM {matrix_b}) AS result;
     """
 
-    print_error_and_speedup(original_sum, kronecker_sum, database)
-    print_error_and_speedup(original_sumproduct, kronecker_sumproduct, database)
+    sum_error, sum_speedup = print_error_and_speedup(original_sum, kronecker_sum, database)
+    sumproduct_error, sumproduct_speedup = print_error_and_speedup(original_sumproduct, kronecker_sumproduct, database)
+
+    return sum_error, sum_speedup, sumproduct_error, sumproduct_speedup
 
 
 def parse_args() -> dict:

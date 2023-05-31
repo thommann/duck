@@ -10,12 +10,23 @@ PRAGMA threads=12;
 """
 
 
-def print_error_and_speedup(original_query: str, kronecker_query: str, database: str):
+def print_error_and_speedup(original_query: str, kronecker_query: str, database: str) -> tuple[float, float]:
+    """
+    Calculates the relative error and the speedup of the kronecker query compared to the original query.
+    :param original_query:
+    :param kronecker_query:
+    :param database:
+    :return: returns the relative error and the speedup
+    """
     original_result, kronecker_result = query_results(original_query, kronecker_query, database)
-    print(f"Error: {abs((original_result - kronecker_result) / original_result):.2%}")
+    error = abs((original_result - kronecker_result) / original_result)
+    print(f"Error: {error:.2%}")
 
     original_time, kronecker_time = query_profiling(original_query, kronecker_query, database)
-    print(f"Speedup: {original_time / kronecker_time:.1f}x")
+    speedup = original_time / kronecker_time
+    print(f"Speedup: {speedup:.1f}x")
+
+    return error, speedup
 
 
 def query_results(original_query: str, kronecker_query: str, database: str) -> tuple[float, float]:
