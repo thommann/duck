@@ -6,7 +6,7 @@ from kronecker import kronecker_decomposition
 
 
 def matrix_to_kronecker(input: str, output_a: str, output_b: str) -> None:
-    matrix = np.loadtxt(input, delimiter=',')
+    matrix = np.loadtxt(input, delimiter=',', ndmin=2)
     a_mat, b_mat = kronecker_decomposition(matrix)
     np.savetxt(output_a, a_mat, delimiter=',')
     np.savetxt(output_b, b_mat, delimiter=',')

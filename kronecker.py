@@ -26,6 +26,9 @@ def massage(matrix: np.ndarray, shape_a: Tuple[int, int]) -> np.ndarray:
     :param shape_a: shape of matrix A
     :return: 2D matrix
     """
+    if not isinstance(shape_a, tuple) or len(shape_a) != 2:
+        raise ValueError('shape_a must be a tuple of length 2.')
+
     return np.vstack(
         [vec(block) for col in np.split(matrix, shape_a[1], axis=1) for block in np.split(col, shape_a[0], 0)])
 
@@ -35,6 +38,9 @@ def compute_shapes(shape: Tuple[int, int]) -> Tuple[Tuple[int, int], Tuple[int, 
     :param shape: shape of the matrix
     :return: shapes of the matrices A and B
     """
+    if not isinstance(shape, tuple) or len(shape) != 2:
+        raise ValueError('shape must be a tuple of length 2.')
+
     m, n = shape
     # choose the heights of the matrices to balance the sizes (m1, m2)
     m1 = int(np.sqrt(m))
