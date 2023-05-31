@@ -5,14 +5,14 @@ from kronecker_to_db import kronecker_to_db
 from matrix_to_kronecker import matrix_to_kronecker
 
 
-def image_to_db(input_path: str, dimensions: tuple, name: str) -> None:
+def image_to_db(input_path: str, dimensions: tuple, name: str, compress_cols: bool = True) -> None:
     full_name = f"{name}_{dimensions[0]}x{dimensions[1]}"
     original = f"data/matrices/{full_name}.csv"
     matrix_a = f"{original[:-4]}_a.csv"
     matrix_b = f"{original[:-4]}_b.csv"
     database = f"data/databases/{full_name}.db"
     image_to_matrix(input_path, original, dimensions)
-    matrix_to_kronecker(original, matrix_a, matrix_b)
+    matrix_to_kronecker(original, matrix_a, matrix_b, compress_cols=compress_cols)
     kronecker_to_db(original, matrix_a, matrix_b, database)
 
 
@@ -21,6 +21,10 @@ def parse_args() -> dict:
     parser.add_argument("--input", type=str, required=True, help="Path to the input image")
     parser.add_argument("--name", type=str, required=True, help="Name of the matrices and db")
     parser.add_argument("--dimensions", type=int, nargs=2, required=True, help="Dimensions of the output matrix")
+    parser.add_argument('--compress_cols',
+                        action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help='Compress columns of the output matrix')
     args = vars(parser.parse_args())
 
     # Input mus be png or jpg
@@ -40,4 +44,4 @@ def parse_args() -> dict:
 
 if __name__ == '__main__':
     args = parse_args()
-    image_to_db(args['input'], args['dimensions'], args['name'])
+    image_to_db(args['input'], args['dimensions'], args['name'], compress_cols=args['compress_cols'])
