@@ -5,7 +5,7 @@ import duckdb
 
 config = """
 PRAGMA enable_profiling='json';
-PRAGMA profile_output='.temp';
+PRAGMA profile_output='out/.temp';
 PRAGMA threads=12;
 """
 
@@ -31,7 +31,6 @@ def print_error_and_speedup(original_query: str, kronecker_query: str, database:
 
 def query_results(original_query: str, kronecker_query: str, database: str) -> tuple[float, float]:
     con = duckdb.connect(database=database)
-    con.execute(config)
 
     original_result = con.sql(original_query).fetchall()[0][0]
     kronecker_result = con.sql(kronecker_query).fetchall()[0][0]
@@ -45,7 +44,7 @@ def query_profiling(original_query: str,
                     kronecker_query: str,
                     database: str,
                     runs: int = 10,
-                    epochs: int = 1) -> tuple[float, float]:
+                    epochs: int = 10) -> tuple[float, float]:
     original_timings = []
     kronecker_timings = []
 
