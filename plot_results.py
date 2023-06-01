@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 rows = [2 ** x for x in range(2, 24 + 1)]
-cols = [2 ** x for x in range(0, 6 + 1)]
+cols = [2 ** x for x in range(1, 6 + 1)]
 
 errors_sum = np.loadtxt('data/results/sum_errors.csv', delimiter=',')
 speedups_sum = np.loadtxt('data/results/sum_speedups.csv', delimiter=',')
@@ -15,10 +15,10 @@ def plot(x: list, y: np.ndarray, title: str, xlabel: str, ylabel: str, filename:
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
-    plt.xscale('log', basex=2)
-    plt.yscale('log', basey=10)
+    plt.xscale('log')
+    plt.yscale('log')
     plt.plot(x, y)
-    plt.savefig('data/results/plots/' + filename + '.png')
+    plt.savefig('data/plots/' + filename + '.png')
 
 
 # plot sum error over rows
