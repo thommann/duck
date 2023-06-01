@@ -10,9 +10,7 @@ def kronecker_to_db(input: str, input_a: str, input_b: str, db_name: str, k: int
     This function takes the name of the matrices, the matrices themselves, and the name of the database
     and inserts the matrices into the database.
     """
-    name = input.split("/")[-1].split(".")[0]
-    name_a = input_a.split("/")[-1].replace(".csv", "")
-    name_b = input_b.split("/")[-1].replace(".csv", "")
+    name_a, name_b, name = "A", "B", "C"
     con = duckdb.connect(db_name)
     matrix_to_table(con, input, name)
     if k == 1:
