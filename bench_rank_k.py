@@ -38,13 +38,8 @@ def bench_rank_k(name: str, dimensions: tuple[int, int], k: int, database: str |
     kronecker_sum = kronecker_sum[:-2] + "AS result;"
     kronecker_sumproduct = kronecker_sumproduct[:-2] + "AS result;"
 
-    print(kronecker_sumproduct)
-    print()
-
     sum_error, sum_speedup = print_error_and_speedup(original_sum, kronecker_sum, database)
     sumproduct_error, sumproduct_speedup = print_error_and_speedup(original_sumproduct, kronecker_sumproduct, database)
-
-    print()
 
     return sum_error, sum_speedup, sumproduct_error, sumproduct_speedup
 
