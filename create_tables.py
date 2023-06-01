@@ -10,3 +10,4 @@ for row in rows:
     for col in cols:
         print(f"row: {row}, col: {col}")
         image_to_db(image, (row, col), name)
+        print(flush=True)

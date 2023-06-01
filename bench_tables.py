@@ -22,6 +22,7 @@ for r in range(len(rows)):
         speedups_sum[r, c] = speedup_sum
         errors_sumproduct[r, c] = error_sumproduct
         speedups_sumproduct[r, c] = speedup_sumproduct
+        print(flush=True)
 
 np.savetxt('data/results/sum_errors.csv', errors_sum, delimiter=',')
 np.savetxt('data/results/sum_speedups.csv', speedups_sum, delimiter=',')
