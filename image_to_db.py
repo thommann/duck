@@ -5,22 +5,23 @@ from kronecker_to_db import kronecker_to_db
 from matrix_to_kronecker import matrix_to_kronecker
 
 
-def image_to_db(input_path: str, dimensions: tuple, name: str, rank: int = 1, compress_cols: bool = True) -> None:
+def image_to_db(input_path: str, dimensions: tuple, name: str, k: int = 1, compress_cols: bool = True) -> None:
     full_name = f"{name}_{dimensions[0]}x{dimensions[1]}"
     original = f"data/matrices/{full_name}.csv"
     matrix_a = f"{original[:-4]}_a.csv"
     matrix_b = f"{original[:-4]}_b.csv"
-    database = f"data/databases/{full_name}.db"
+    rank_append = '' if k == 1 else f"_rank_{k}"
+    database = f"data/databases/{full_name}{rank_append}.db"
     image_to_matrix(input_path, original, dimensions)
-    matrix_to_kronecker(original, matrix_a, matrix_b, rank=rank, compress_cols=compress_cols)
-    kronecker_to_db(original, matrix_a, matrix_b, database, rank=rank)
+    matrix_to_kronecker(original, matrix_a, matrix_b, k=k, compress_cols=compress_cols)
+    kronecker_to_db(original, matrix_a, matrix_b, database, k=k)
 
 
 def parse_args() -> dict:
     parser = argparse.ArgumentParser(description="Image to csv converter")
-    parser.add_argument("--input", type=str, required=True, help="Path to the input image")
-    parser.add_argument("--name", type=str, required=True, help="Name of the matrices and db")
-    parser.add_argument("--dimensions", type=int, nargs=2, required=True, help="Dimensions of the output matrix")
+    parser.add_argument("--input", "-i", type=str, required=True, help="Path to the input image")
+    parser.add_argument("--name", "-n", type=str, required=True, help="Name of the matrices and db")
+    parser.add_argument("--dimensions", "-d", type=int, nargs=2, required=True, help="Dimensions of the output matrix")
     parser.add_argument('--compress_cols',
                         action=argparse.BooleanOptionalAction,
                         default=True,
@@ -49,4 +50,4 @@ def parse_args() -> dict:
 
 if __name__ == '__main__':
     args = parse_args()
-    image_to_db(args['input'], args['dimensions'], args['name'], rank=args['rank'], compress_cols=args['compress_cols'])
+    image_to_db(args['input'], args['dimensions'], args['name'], k=args['rank'], compress_cols=args['compress_cols'])

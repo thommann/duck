@@ -5,17 +5,18 @@ import numpy as np
 from kronecker import kronecker_decomposition
 
 
-def matrix_to_kronecker(input: str, output_a: str, output_b: str, rank: int = 1, compress_cols: bool = True) -> None:
+def matrix_to_kronecker(input: str, output_a: str, output_b: str, k: int = 1, compress_cols: bool = True) -> None:
     matrix = np.loadtxt(input, delimiter=',', ndmin=2)
 
-    a_matrices, b_matrices = kronecker_decomposition(matrix, rank=rank, compress_cols=compress_cols)
-    if rank == 1:
+    a_matrices, b_matrices = kronecker_decomposition(matrix, rank=k, compress_cols=compress_cols)
+    if k == 1:
         np.savetxt(output_a, a_matrices[0], delimiter=',')
         np.savetxt(output_b, b_matrices[0], delimiter=',')
     else:
-        for r in range(rank):
-            np.savetxt(output_a.replace('.csv', f'_{r}.csv'), a_matrices[r], delimiter=',')
-            np.savetxt(output_b.replace('.csv', f'_{r}.csv'), b_matrices[r], delimiter=',')
+        for r in range(k):
+            rank = r + 1
+            np.savetxt(output_a.replace('.csv', f'_{rank}.csv'), a_matrices[r], delimiter=',')
+            np.savetxt(output_b.replace('.csv', f'_{rank}.csv'), b_matrices[r], delimiter=',')
 
 
 def parse_args() -> dict:
@@ -49,5 +50,5 @@ def parse_args() -> dict:
 
 if __name__ == '__main__':
     args = parse_args()
-    matrix_to_kronecker(args['input'], args['output_a'], args['output_b'], rank=args['rank'],
+    matrix_to_kronecker(args['input'], args['output_a'], args['output_b'], k=args['rank'],
                         compress_cols=args['compress_cols'])
