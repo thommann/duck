@@ -5,13 +5,13 @@ import duckdb
 from matrix_to_table import matrix_to_table
 
 
-def kronecker_to_db(input: str, input_a: str, input_b: str, db_name: str, k: int = 1) -> None:
+def kronecker_to_db(input: str, input_a: str, input_b: str, database: str, k: int = 1) -> None:
     """
     This function takes the name of the matrices, the matrices themselves, and the name of the database
     and inserts the matrices into the database.
     """
     name_a, name_b, name = "A", "B", "C"
-    con = duckdb.connect(db_name)
+    con = duckdb.connect(database)
     matrix_to_table(con, input, name)
     if k == 1:
         matrix_to_table(con, input_a, name_a)
@@ -28,7 +28,7 @@ def parse_args() -> dict:
     parser.add_argument("--input", type=str, required=True, help="Path to the original matrix CSV file")
     parser.add_argument("--input_a", type=str, required=True, help="Path to matrix A CSV file")
     parser.add_argument("--input_b", type=str, required=True, help="Path to matrix B CSV file")
-    parser.add_argument("--database", type=str, required=True, help="Name of the database")
+    parser.add_argument("--database", type=str, required=True, help="Path to the database file")
     parser.add_argument("--rank", "-r", "-k", type=int, default=1, help="Rank of the Kronecker decomposition")
     args = vars(parser.parse_args())
 
@@ -43,6 +43,10 @@ def parse_args() -> dict:
     # rank must be a positive integer
     if args["rank"] < 1:
         raise ValueError("Rank must be a positive integer")
+
+    # database file must be a valid DuckDB database file
+    if not args["database"].endswith(".db"):
+        raise ValueError("Database file is not a DuckDB database file")
 
     return args
 
