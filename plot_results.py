@@ -46,3 +46,10 @@ plot(rows, speedups_sumproduct.mean(axis=1), 'Sum-product speedup over rows', 'r
 # plot sumproduct speedup over cols
 plot(cols, speedups_sumproduct.mean(axis=0), 'Sum-product speedup over cols', 'cols', 'speedup',
      'sumproduct_speedup_over_cols')
+
+# plot sum error over cols for max rows
+plot(cols, errors_sum[-1], 'Sum error over cols for max rows', 'cols', 'error', 'sum_error_over_cols_max_rows')
+
+# plot sumproduct error over cols for max rows
+plot(cols, errors_sumproduct[-1], 'Sum-product error over cols for max rows', 'cols', 'error',
+     'sumproduct_error_over_cols_max_rows')
