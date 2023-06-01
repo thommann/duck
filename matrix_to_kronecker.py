@@ -5,7 +5,7 @@ import numpy as np
 from kronecker import kronecker_decomposition
 
 
-def matrix_to_kronecker(input: str, output_a: str, output_b: str, k: int = 1, compress_cols: bool = True) -> None:
+def matrix_to_kronecker(input: str, output_a: str, output_b: str, k: int = 1, compress_cols: bool = False) -> None:
     matrix = np.loadtxt(input, delimiter=',', ndmin=2)
 
     a_matrices, b_matrices = kronecker_decomposition(matrix, rank=k, compress_cols=compress_cols)
@@ -24,9 +24,9 @@ def parse_args() -> dict:
     parser.add_argument('-i', '--input', type=str, required=True, help='Path to input CSV file')
     parser.add_argument('-oa', '--output_a', type=str, required=True, help='Path to output CSV file for matrix A')
     parser.add_argument('-ob', '--output_b', type=str, required=True, help='Path to output CSV file for matrix B')
-    parser.add_argument('--compress_cols',
+    parser.add_argument('--compress_cols', '-cc',
                         action=argparse.BooleanOptionalAction,
-                        default=True,
+                        default=False,
                         help='Compress columns of matrix A')
     parser.add_argument('--rank', '-r', '-k', type=int, default=1, help='Rank of the Kronecker decomposition')
     args = vars(parser.parse_args())

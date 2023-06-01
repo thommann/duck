@@ -5,11 +5,13 @@ from kronecker_to_db import kronecker_to_db
 from matrix_to_kronecker import matrix_to_kronecker
 
 
-def image_to_db(input_path: str, dimensions: tuple, name: str, k: int = 1, compress_cols: bool = True) -> None:
+def image_to_db(input_path: str, dimensions: tuple, name: str, k: int = 1, compress_cols: bool = False) -> None:
     full_name = f"{name}_{dimensions[0]}x{dimensions[1]}"
+    if compress_cols:
+        full_name += "_cc"
     original = f"data/matrices/{full_name}.csv"
-    matrix_a = f"{original[:-4]}_a.csv"
-    matrix_b = f"{original[:-4]}_b.csv"
+    matrix_a = original.replace(".csv", "_a.csv")
+    matrix_b = original.replace(".csv", "_b.csv")
     rank_append = '' if k == 1 else f"_rank_{k}"
     database = f"data/databases/{full_name}{rank_append}.db"
     image_to_matrix(input_path, original, dimensions)
@@ -22,9 +24,9 @@ def parse_args() -> dict:
     parser.add_argument("--input", "-i", type=str, required=True, help="Path to the input image")
     parser.add_argument("--name", "-n", type=str, required=True, help="Name of the matrices and db")
     parser.add_argument("--dimensions", "-d", type=int, nargs=2, required=True, help="Dimensions of the output matrix")
-    parser.add_argument('--compress_cols',
+    parser.add_argument('--compress_cols', '-cc',
                         action=argparse.BooleanOptionalAction,
-                        default=True,
+                        default=False,
                         help='Compress columns of the output matrix')
     parser.add_argument('--rank', '-r', '-k', type=int, default=1, help='Rank of the kronecker product')
     args = vars(parser.parse_args())

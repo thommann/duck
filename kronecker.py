@@ -31,7 +31,7 @@ def massage(matrix: np.ndarray, shape_a: tuple[int, int]) -> np.ndarray:
         [vec(block) for col in np.split(matrix, shape_a[1], axis=1) for block in np.split(col, shape_a[0], 0)])
 
 
-def compute_shapes(shape: tuple[int, int], compress_cols: bool = True) -> tuple[tuple[int, int], tuple[int, int]]:
+def compute_shapes(shape: tuple[int, int], compress_cols: bool = False) -> tuple[tuple[int, int], tuple[int, int]]:
     """
     :param shape: shape of the matrix
     :param compress_cols: if True, compress the columns of the matrix
@@ -50,22 +50,23 @@ def compute_shapes(shape: tuple[int, int], compress_cols: bool = True) -> tuple[
             m1 -= 1
     m2 = m // m1
     # choose the widths of the matrices to balance the sizes (n1, n2)
-    if not compress_cols:
-        n1 = n
-    else:
+    if compress_cols:
         n1 = int(np.sqrt(n))
         for _ in range(n1):
             if n % n1 == 0:
                 break
             else:
                 n1 -= 1
+    else:
+        n1 = n
     n2 = n // n1
 
     return (m1, n1), (m2, n2)
 
 
-def kronecker_decomposition(matrix: np.ndarray, rank: int = 1, compress_cols: bool = True) -> tuple[
-    list[np.ndarray], list[np.ndarray]]:
+def kronecker_decomposition(matrix: np.ndarray,
+                            rank: int = 1,
+                            compress_cols: bool = False) -> tuple[list[np.ndarray], list[np.ndarray]]:
     """
     :param matrix: 2D matrix
     :param rank: rank of the decomposition
