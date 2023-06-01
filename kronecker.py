@@ -75,9 +75,9 @@ def kronecker_decomposition(matrix: np.ndarray,
     """
     shape_a, shape_b = compute_shapes(matrix.shape, compress_cols=compress_cols)
     massaged_matrix = massage(matrix, shape_a)
-    print("Computing SVD...")
+    print("Computing SVD...", flush=True)
     u_mat, s_vec, vh_mat = np.linalg.svd(massaged_matrix, full_matrices=False)
-    print("Done.")
+    print("Done.", flush=True)
     v_mat = vh_mat.transpose()
     a_matrices = [reshape(u_mat[:, i], shape_a) * np.sqrt(s_vec[i]) for i in range(rank)]
     b_matrices = [reshape(v_mat[:, i], shape_b) * np.sqrt(s_vec[i]) for i in range(rank)]
