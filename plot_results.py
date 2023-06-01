@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-rows = [2 ** x for x in range(2, 24 + 1)]
-cols = [2 ** x for x in range(1, 6 + 1)]
+rows = [2 ** x for x in range(10, 26 + 1)]
+cols = [2 ** x for x in range(1, 4 + 1)]
 
 errors_sum = np.loadtxt('data/results/sum_errors.csv', delimiter=',')
 speedups_sum = np.loadtxt('data/results/sum_speedups.csv', delimiter=',')

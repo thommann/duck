@@ -1,7 +1,7 @@
 from image_to_db import image_to_db
 
-rows = [2 ** x for x in range(2, 24 + 1)]
-cols = [2 ** x for x in range(0, 6 + 1)]
+rows = [2 ** x for x in range(10, 26 + 1)]
+cols = [2 ** x for x in range(1, 4 + 1)]
 
 image = 'data/images/webb.png'
 name = 'webb'
