@@ -5,12 +5,17 @@ import numpy as np
 from kronecker import kronecker_decomposition
 
 
-def matrix_to_kronecker(input: str, output_a: str, output_b: str, compress_cols: bool = True) -> None:
+def matrix_to_kronecker(input: str, output_a: str, output_b: str, rank: int = 1, compress_cols: bool = True) -> None:
     matrix = np.loadtxt(input, delimiter=',', ndmin=2)
 
-    a_mat, b_mat = kronecker_decomposition(matrix, compress_cols=compress_cols)
-    np.savetxt(output_a, a_mat, delimiter=',')
-    np.savetxt(output_b, b_mat, delimiter=',')
+    a_matrices, b_matrices = kronecker_decomposition(matrix, rank=rank, compress_cols=compress_cols)
+    if rank == 1:
+        np.savetxt(output_a, a_matrices[0], delimiter=',')
+        np.savetxt(output_b, b_matrices[0], delimiter=',')
+    else:
+        for r in range(rank):
+            np.savetxt(output_a.replace('.csv', f'_{r}.csv'), a_matrices[r], delimiter=',')
+            np.savetxt(output_b.replace('.csv', f'_{r}.csv'), b_matrices[r], delimiter=',')
 
 
 def parse_args() -> dict:
@@ -22,6 +27,7 @@ def parse_args() -> dict:
                         action=argparse.BooleanOptionalAction,
                         default=True,
                         help='Compress columns of matrix A')
+    parser.add_argument('--rank', '-r', '-k', type=int, default=1, help='Rank of the Kronecker decomposition')
     args = vars(parser.parse_args())
 
     # Input must be a CSV file
@@ -34,9 +40,14 @@ def parse_args() -> dict:
     if not args['output_b'].endswith('.csv'):
         raise ValueError('Output B must be a CSV file')
 
+    # Rank must be positive
+    if args['rank'] < 1:
+        raise ValueError('Rank must be positive')
+
     return args
 
 
 if __name__ == '__main__':
     args = parse_args()
-    matrix_to_kronecker(args['input'], args['output_a'], args['output_b'], compress_cols=args['compress_cols'])
+    matrix_to_kronecker(args['input'], args['output_a'], args['output_b'], rank=args['rank'],
+                        compress_cols=args['compress_cols'])

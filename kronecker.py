@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import numpy as np
 
 
@@ -11,7 +9,7 @@ def vec(matrix: np.ndarray) -> np.ndarray:
     return matrix.ravel(order='F')
 
 
-def reshape(vector: np.ndarray, shape: Tuple[int, int]) -> np.ndarray:
+def reshape(vector: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
     """
     :param vector: 1D vector
     :param shape:
@@ -20,7 +18,7 @@ def reshape(vector: np.ndarray, shape: Tuple[int, int]) -> np.ndarray:
     return vector.reshape(shape, order='F')
 
 
-def massage(matrix: np.ndarray, shape_a: Tuple[int, int]) -> np.ndarray:
+def massage(matrix: np.ndarray, shape_a: tuple[int, int]) -> np.ndarray:
     """
     :param matrix: 2D matrix
     :param shape_a: shape of matrix A
@@ -33,7 +31,7 @@ def massage(matrix: np.ndarray, shape_a: Tuple[int, int]) -> np.ndarray:
         [vec(block) for col in np.split(matrix, shape_a[1], axis=1) for block in np.split(col, shape_a[0], 0)])
 
 
-def compute_shapes(shape: Tuple[int, int], compress_cols: bool = True) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+def compute_shapes(shape: tuple[int, int], compress_cols: bool = True) -> tuple[tuple[int, int], tuple[int, int]]:
     """
     :param shape: shape of the matrix
     :param compress_cols: if True, compress the columns of the matrix
@@ -66,9 +64,11 @@ def compute_shapes(shape: Tuple[int, int], compress_cols: bool = True) -> Tuple[
     return (m1, n1), (m2, n2)
 
 
-def kronecker_decomposition(matrix: np.ndarray, compress_cols=True) -> Tuple[np.ndarray, np.ndarray]:
+def kronecker_decomposition(matrix: np.ndarray, rank: int = 1, compress_cols: bool = True) -> tuple[
+    list[np.ndarray], list[np.ndarray]]:
     """
     :param matrix: 2D matrix
+    :param rank: rank of the decomposition
     :param compress_cols: if True, compress the columns of the matrix
     :return: A: 2D matrix, B: 2D matrix
     """
@@ -79,6 +79,6 @@ def kronecker_decomposition(matrix: np.ndarray, compress_cols=True) -> Tuple[np.
     print("Done.")
     v_mat = vh_mat.transpose()
     sqrt_s = np.sqrt(s_vec[0])
-    a_mat = reshape(u_mat[:, 0], shape_a) * sqrt_s
-    b_mat = reshape(v_mat[:, 0], shape_b) * sqrt_s
-    return a_mat, b_mat
+    a_matrices = [reshape(u_mat[:, i], shape_a) * sqrt_s for i in range(rank)]
+    b_matrices = [reshape(v_mat[:, i], shape_b) * sqrt_s for i in range(rank)]
+    return a_matrices, b_matrices
