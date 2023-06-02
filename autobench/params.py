@@ -7,5 +7,7 @@ cols = [2]
 max_k = 10
 k = 2
 
+cc = True
+
 image = 'data/images/webb.png'
 name = 'webb'

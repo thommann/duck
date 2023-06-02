@@ -5,8 +5,14 @@ import numpy as np
 from src.kronecker import kronecker_decomposition, svd, compute_shapes
 
 
-def matrix_to_kronecker(input_c: str, output_a: str, output_b: str, k: int = 1, compress_cols: bool = False) -> None:
-    matrix = np.loadtxt(input_c, delimiter=',', ndmin=2)
+def matrix_to_kronecker(input_c: str,
+                        output_a: str,
+                        output_b: str,
+                        k: int = 1,
+                        compress_cols: bool = False,
+                        matrix: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
+    if matrix is None:
+        matrix = np.loadtxt(input_c, delimiter=',', ndmin=2)
     shape_c = matrix.shape
 
     shape_a, shape_b = compute_shapes(shape_c, compress_cols=compress_cols)
@@ -18,10 +24,12 @@ def matrix_to_kronecker(input_c: str, output_a: str, output_b: str, k: int = 1, 
     np.savetxt(f"{prefix}S{suffix}", s_vec, delimiter=',')
     np.savetxt(f"{prefix}VH{suffix}", vh_mat, delimiter=',')
 
-    a_matrices, b_matrices = kronecker_decomposition(u_mat, s_vec, vh_mat, shape_a, shape_b, k=k)
+    a_mat, b_mat = kronecker_decomposition(u_mat, s_vec, vh_mat, shape_a, shape_b, k=k)
 
-    np.savetxt(output_a, a_matrices, delimiter=',')
-    np.savetxt(output_b, b_matrices, delimiter=',')
+    np.savetxt(output_a, a_mat, delimiter=',')
+    np.savetxt(output_b, b_mat, delimiter=',')
+
+    return a_mat, b_mat
 
 
 def parse_args() -> dict:

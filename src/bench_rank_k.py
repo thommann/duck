@@ -6,7 +6,8 @@ from src.profiling import print_error_and_speedup
 def bench_rank_k(name: str,
                  dimensions: tuple[int, int],
                  k: int,
-                 database: str | None = None) -> tuple[float, float, float, float]:
+                 database: str | None = None,
+                 cc: bool = False) -> tuple[float, float, float, float]:
     """
     Compute the error and speedup of the Kronecker sum and sumproduct algorithms compared to the original algorithm.
     :param database:
@@ -17,6 +18,8 @@ def bench_rank_k(name: str,
     """
     rows, cols = dimensions
     full_name = f"{name}_{rows}x{cols}"
+    if cc:
+        full_name += "_cc"
     if database is None:
         database = f"data/databases/{full_name}_rank_{k}.db"
     matrix_a, matrix_b, original = "A", "B", "C"

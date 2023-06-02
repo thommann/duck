@@ -5,14 +5,17 @@ import duckdb
 from src.matrix_to_table import matrix_to_table
 
 
-def kronecker_to_db(input: str, input_a: str, input_b: str, database: str) -> None:
+def kronecker_to_db(input_c: str,
+                    input_a: str,
+                    input_b: str,
+                    database: str) -> None:
     """
     This function takes the name of the matrices, the matrices themselves, and the name of the database
     and inserts the matrices into the database.
     """
     name_a, name_b, name = "A", "B", "C"
     con = duckdb.connect(database)
-    matrix_to_table(con, input, name)
+    matrix_to_table(con, input_c, name)
     matrix_to_table(con, input_a, name_a)
     matrix_to_table(con, input_b, name_b)
     con.close()

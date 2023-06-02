@@ -1,9 +1,8 @@
 import argparse
 
-from src.svd_to_kronecker import svd_to_kronecker
-
 from src.image_to_matrix import image_to_matrix
 from src.kronecker_to_db import kronecker_to_db
+from src.matrix_to_kronecker import matrix_to_kronecker
 
 
 def image_to_db(input_path: str, dimensions: tuple, name: str, k: int = 1, compress_cols: bool = False) -> None:
@@ -15,8 +14,8 @@ def image_to_db(input_path: str, dimensions: tuple, name: str, k: int = 1, compr
     matrix_b = original.replace(".csv", "_b.csv")
     rank_append = '' if k == 1 else f"_rank_{k}"
     database = f"data/databases/{full_name}{rank_append}.db"
-    image_to_matrix(input_path, original, dimensions)
-    svd_to_kronecker(original, matrix_a, matrix_b, k=k, compress_cols=compress_cols)
+    matrix = image_to_matrix(input_path, original, dimensions)
+    matrix_to_kronecker(original, matrix_a, matrix_b, k=k, compress_cols=compress_cols, matrix=matrix)
     kronecker_to_db(original, matrix_a, matrix_b, database)
 
 

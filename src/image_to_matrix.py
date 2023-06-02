@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 
-def image_to_matrix(input_path: str, output_path: str, dimensions: tuple) -> None:
+def image_to_matrix(input_path: str, output_path: str, dimensions: tuple) -> np.ndarray:
     img = cv2.imread(input_path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.resize(img, (dimensions[1], dimensions[0]))
@@ -13,6 +13,8 @@ def image_to_matrix(input_path: str, output_path: str, dimensions: tuple) -> Non
     matrix = matrix * 100  # Scale
     matrix += np.random.random(matrix.shape) * 10  # Add noise
     np.savetxt(output_path, matrix, delimiter=',')
+
+    return matrix
 
 
 def parse_args() -> dict:
