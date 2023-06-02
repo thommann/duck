@@ -18,14 +18,16 @@ def print_error_and_speedup(original_query: str, kronecker_query: str, database:
     :return: returns the relative error and the speedup
     """
     original_result, kronecker_result = query_results(original_query, kronecker_query, database)
-    error = abs((original_result - kronecker_result) / original_result)
-    print(f"Error: {error:.4%}", flush=True)
+    abs_error = abs(original_result - kronecker_result)
+    rel_error = abs_error / original_result
+    print(f"Abs. Error: {abs_error:.0f}", flush=True)
+    print(f"Rel. Error: {rel_error:.4%}", flush=True)
 
     original_time, kronecker_time = query_profiling(original_query, kronecker_query, database)
     speedup = original_time / kronecker_time
     print(f"Speedup: {speedup:.1f}x", flush=True)
 
-    return error, speedup
+    return rel_error, speedup
 
 
 def query_results(original_query: str, kronecker_query: str, database: str) -> tuple[float, float]:
