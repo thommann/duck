@@ -5,7 +5,7 @@ import duckdb
 config = """
 PRAGMA enable_profiling='json';
 PRAGMA profile_output='out/.temp';
-PRAGMA threads=12;
+PRAGMA threads=48;
 """
 
 
