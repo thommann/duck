@@ -4,7 +4,6 @@ import duckdb
 
 
 def matrix_to_table(connection: duckdb.DuckDBPyConnection, filepath: str, name: str) -> None:
-    connection.execute(f"DROP TABLE IF EXISTS {name}")
     connection.execute(f"CREATE TABLE {name} AS SELECT * FROM '{filepath}'")
 
 

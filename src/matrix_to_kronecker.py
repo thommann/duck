@@ -10,24 +10,42 @@ def matrix_to_kronecker(input_c: str,
                         output_b: str,
                         k: int = 1,
                         compress_cols: bool = False,
-                        matrix: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
+                        matrix: np.ndarray | None = None,
+                        initialized: bool = False) -> tuple[np.ndarray, np.ndarray]:
     if matrix is None:
         matrix = np.loadtxt(input_c, delimiter=',', ndmin=2)
     shape_c = matrix.shape
 
     shape_a, shape_b = compute_shapes(shape_c, compress_cols=compress_cols)
-    u_mat, s_vec, vh_mat = svd(matrix, shape_a)
+
+    np.savetxt(input_c.replace("/matrices/", "/bcols/"), [shape_b[1]], delimiter=',')
 
     cc = '_cc' if compress_cols else ''
     prefix, suffix = 'data/svd/', f'_{shape_c[0]}x{shape_c[1]}{cc}.csv'
-    np.savetxt(f"{prefix}U{suffix}", u_mat, delimiter=',')
-    np.savetxt(f"{prefix}S{suffix}", s_vec, delimiter=',')
-    np.savetxt(f"{prefix}VH{suffix}", vh_mat, delimiter=',')
 
-    a_mat, b_mat = kronecker_decomposition(u_mat, s_vec, vh_mat, shape_a, shape_b, k=k)
+    try:
+        if not initialized:
+            raise OSError
+        u_mat = np.loadtxt(f"{prefix}U{suffix}", delimiter=',')
+        s_vec = np.loadtxt(f"{prefix}S{suffix}", delimiter=',')
+        vh_mat = np.loadtxt(f"{prefix}VH{suffix}", delimiter=',')
+        initialized = True
+    except OSError:
+        u_mat, s_vec, vh_mat = svd(matrix, shape_a)
+        np.savetxt(f"{prefix}U{suffix}", u_mat, delimiter=',')
+        np.savetxt(f"{prefix}S{suffix}", s_vec, delimiter=',')
+        np.savetxt(f"{prefix}VH{suffix}", vh_mat, delimiter=',')
+        initialized = False
 
-    np.savetxt(output_a, a_mat, delimiter=',')
-    np.savetxt(output_b, b_mat, delimiter=',')
+    try:
+        if not initialized:
+            raise OSError
+        a_mat = np.loadtxt(output_a, delimiter=',')
+        b_mat = np.loadtxt(output_b, delimiter=',')
+    except OSError:
+        a_mat, b_mat = kronecker_decomposition(u_mat, s_vec, vh_mat, shape_a, shape_b, k=k)
+        np.savetxt(output_a, a_mat, delimiter=',')
+        np.savetxt(output_b, b_mat, delimiter=',')
 
     return a_mat, b_mat
 

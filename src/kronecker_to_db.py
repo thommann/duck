@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import duckdb
 
@@ -14,6 +15,13 @@ def kronecker_to_db(input_c: str,
     and inserts the matrices into the database.
     """
     name_a, name_b, name = "A", "B", "C"
+
+    # Delete the database if it already exists
+    try:
+        os.remove(database)
+    except OSError:
+        pass
+
     con = duckdb.connect(database)
     matrix_to_table(con, input_c, name)
     matrix_to_table(con, input_a, name_a)

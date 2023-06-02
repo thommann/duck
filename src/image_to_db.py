@@ -1,5 +1,7 @@
 import argparse
 
+import numpy as np
+
 from src.image_to_matrix import image_to_matrix
 from src.kronecker_to_db import kronecker_to_db
 from src.matrix_to_kronecker import matrix_to_kronecker
@@ -9,14 +11,21 @@ def image_to_db(input_path: str, dimensions: tuple, name: str, k: int = 1, compr
     full_name = f"{name}_{dimensions[0]}x{dimensions[1]}"
     if compress_cols:
         full_name += "_cc"
-    original = f"data/matrices/{full_name}.csv"
-    matrix_a = original.replace(".csv", "_a.csv")
-    matrix_b = original.replace(".csv", "_b.csv")
+    matrix_c = f"data/matrices/{full_name}.csv"
+    matrix_a = matrix_c.replace(".csv", "_a.csv")
+    matrix_b = matrix_c.replace(".csv", "_b.csv")
     rank_append = '' if k == 1 else f"_rank_{k}"
     database = f"data/databases/{full_name}{rank_append}.db"
-    matrix = image_to_matrix(input_path, original, dimensions)
-    matrix_to_kronecker(original, matrix_a, matrix_b, k=k, compress_cols=compress_cols, matrix=matrix)
-    kronecker_to_db(original, matrix_a, matrix_b, database)
+    try:
+        matrix = np.loadtxt(matrix_c, delimiter=',')
+        initialized = True
+    except OSError:
+        matrix = image_to_matrix(input_path, matrix_c, dimensions)
+        initialized = False
+    matrix_to_kronecker(matrix_c, matrix_a, matrix_b, k=k, compress_cols=compress_cols, matrix=matrix,
+                        initialized=initialized)
+    kronecker_to_db(matrix_c, matrix_a, matrix_b, database)
+    print("All done!", flush=True)
 
 
 def parse_args() -> dict:
