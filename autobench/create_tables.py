@@ -1,4 +1,4 @@
-from image_to_db import image_to_db
+from src.image_to_db import image_to_db
 
 rows = [2 ** x for x in range(10, 26 + 1)]
 cols = [2 ** x for x in range(1, 4 + 1)]

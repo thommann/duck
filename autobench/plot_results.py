@@ -4,10 +4,10 @@ import numpy as np
 rows = [2 ** x for x in range(10, 26 + 1)]
 cols = [2 ** x for x in range(1, 4 + 1)]
 
-errors_sum = np.loadtxt('data/results/sum_errors.csv', delimiter=',')
-speedups_sum = np.loadtxt('data/results/sum_speedups.csv', delimiter=',')
-errors_sumproduct = np.loadtxt('data/results/sumproduct_errors.csv', delimiter=',')
-speedups_sumproduct = np.loadtxt('data/results/sumproduct_speedups.csv', delimiter=',')
+errors_sum = np.loadtxt('../data/results/sum_errors.csv', delimiter=',')
+speedups_sum = np.loadtxt('../data/results/sum_speedups.csv', delimiter=',')
+errors_sumproduct = np.loadtxt('../data/results/sumproduct_errors.csv', delimiter=',')
+speedups_sumproduct = np.loadtxt('../data/results/sumproduct_speedups.csv', delimiter=',')
 
 
 def plot(x: list, y: np.ndarray, title: str, xlabel: str, ylabel: str, filename: str) -> None:
@@ -53,3 +53,10 @@ plot(cols, errors_sum[-1], 'Sum error over cols for max rows', 'cols', 'error', 
 # plot sumproduct error over cols for max rows
 plot(cols, errors_sumproduct[-1], 'Sum-product error over cols for max rows', 'cols', 'error',
      'sumproduct_error_over_cols_max_rows')
+
+# plot sum speedup over cols for max rows
+plot(cols, speedups_sum[-1], 'Sum speedup over cols for max rows', 'cols', 'speedup', 'sum_speedup_over_cols_max_rows')
+
+# plot sumproduct speedup over cols for max rows
+plot(cols, speedups_sumproduct[-1], 'Sum-product speedup over cols for max rows', 'cols', 'speedup',
+     'sumproduct_speedup_over_cols_max_rows')

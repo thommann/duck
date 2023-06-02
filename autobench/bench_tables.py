@@ -1,6 +1,6 @@
 import numpy as np
 
-from bench import bench
+from src.bench import bench
 
 rows = [2 ** x for x in range(10, 26 + 1)]
 cols = [2 ** x for x in range(1, 4 + 1)]
