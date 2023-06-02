@@ -5,8 +5,8 @@ import numpy as np
 from src.kronecker import kronecker_decomposition, svd, compute_shapes
 
 
-def matrix_to_kronecker(input: str, output_a: str, output_b: str, k: int = 1, compress_cols: bool = False) -> None:
-    matrix = np.loadtxt(input, delimiter=',', ndmin=2)
+def matrix_to_kronecker(input_c: str, output_a: str, output_b: str, k: int = 1, compress_cols: bool = False) -> None:
+    matrix = np.loadtxt(input_c, delimiter=',', ndmin=2)
     shape_c = matrix.shape
 
     shape_a, shape_b = compute_shapes(shape_c, compress_cols=compress_cols)
