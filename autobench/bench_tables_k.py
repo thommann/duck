@@ -9,5 +9,5 @@ rows = rows_base_10
 print(f"rank: {k}, cols: {col}", flush=True)
 for row in rows:
     print(f"rows: {row:,}", flush=True)
-    database = f"data/databases/{name}_{row}x{col}_rank_10.db"
+    database = f"data/databases/{name}_{row}x{col}_rank_2.db"
     bench_rank_k(name, (row, col), k, database)
