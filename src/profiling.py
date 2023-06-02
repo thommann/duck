@@ -1,5 +1,4 @@
 import json
-import time
 
 import duckdb
 
@@ -54,16 +53,16 @@ def query_profiling(original_query: str,
     con = duckdb.connect(database=database)
     con.execute(config)
 
-    for _ in range(epochs):
+    for epoch in range(epochs):
         for query, timings in queries:
-            for _ in range(runs):
-                res = con.sql(query).explain('analyze')
+            for run in range(runs):
+                print(f"EPOCH {epoch + 1}/{epochs} - RUN {run + 1}/{runs}", flush=True, end="\r")
 
+                res = con.sql(query).explain('analyze')
                 res_json = json.loads(res)
                 timings.append(res_json["timing"])
 
-                # sleep for 1 second to make sure the file is written
-                time.sleep(1)
+                print(" " * 100, end="\r", flush=True)
 
     con.close()
 

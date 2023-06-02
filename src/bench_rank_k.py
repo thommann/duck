@@ -35,9 +35,9 @@ def bench_rank_k(name: str,
             f"((SELECT SUM(column0) FROM {matrix_a}_{rank}) * (SELECT SUM(column0) FROM {matrix_b}_{rank})) + "
         for rank_prime in range(1, k + 1):
             kronecker_sumproduct += \
-                f"((SELECT SUM(a.column0 * a_prime.column0) " \
+                f"((SELECT SUM(a.column0 * a_prime.column1) " \
                 f"FROM {matrix_a}_{rank} AS a JOIN {matrix_a}_{rank_prime} AS a_prime ON a.id = a_prime.id) * " \
-                f"(SELECT SUM(b.column0 * b_prime.column1) " \
+                f"(SELECT SUM(b.column0 * b_prime.column0) " \
                 f"FROM {matrix_b}_{rank} AS b JOIN {matrix_b}_{rank_prime} AS b_prime ON b.id = b_prime.id)) + "
     kronecker_sum = kronecker_sum[:-2] + "AS result;"
     kronecker_sumproduct = kronecker_sumproduct[:-2] + "AS result;"
