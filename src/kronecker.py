@@ -64,24 +64,21 @@ def compute_shapes(shape: tuple[int, int], compress_cols: bool = False) -> tuple
     return (m1, n1), (m2, n2)
 
 
-def kronecker_decomposition(matrix: np.ndarray,
-                            rank: int = 1,
-                            compress_cols: bool = False) -> tuple[np.ndarray, np.ndarray]:
-    """
-    :param matrix: 2D matrix
-    :param rank: rank of the decomposition
-    :param compress_cols: if True, compress the columns of the matrix
-    :return: A: 2D matrix, B: 2D matrix
-    """
-    shape_a, shape_b = compute_shapes(matrix.shape, compress_cols=compress_cols)
-    massaged_matrix = massage(matrix, shape_a)
-    print("Computing SVD...", flush=True)
-    u_mat, s_vec, vh_mat = np.linalg.svd(massaged_matrix, full_matrices=False)
-    print("Done.", flush=True)
+def kronecker_decomposition(u_mat: np.ndarray, s_vec: np.ndarray, vh_mat: np.ndarray,
+                            shape_a: tuple[int, int], shape_b: tuple[int, int],
+                            k: int = 1) -> tuple[np.ndarray, np.ndarray]:
     v_mat = vh_mat.transpose()
     scales = np.sqrt(s_vec)
     u_mat_scaled = u_mat * scales
     v_mat_scaled = v_mat * scales
-    a_matrices = np.hstack([reshape(u_mat_scaled[:, i], shape_a) for i in range(rank)])
-    b_matrices = np.hstack([reshape(v_mat_scaled[:, i], shape_b) for i in range(rank)])
+    a_matrices = np.hstack([reshape(u_mat_scaled[:, i], shape_a) for i in range(k)])
+    b_matrices = np.hstack([reshape(v_mat_scaled[:, i], shape_b) for i in range(k)])
     return a_matrices, b_matrices
+
+
+def svd(matrix: np.ndarray, shape_a: tuple[int, int]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    massaged_matrix = massage(matrix, shape_a)
+    print("Computing SVD...", flush=True)
+    u_mat, s_vec, vh_mat = np.linalg.svd(massaged_matrix, full_matrices=False)
+    print("Done.", flush=True)
+    return u_mat, s_vec, vh_mat
