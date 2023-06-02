@@ -1,4 +1,6 @@
 #!/bin/bash
 
-name=${1%.py}
+filename=$(basename -- "$1")
+name="${filename%.*}"
+
 kill "$(cat out/"$name".pid)"

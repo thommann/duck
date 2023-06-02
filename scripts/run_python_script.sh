@@ -20,7 +20,8 @@ done
 shift $((OPTIND -1))
 
 source venv/bin/activate
-name=${1%.py}
+filename=$(basename -- "$1")
+name="${filename%.*}"
 
 # Your command
 if [ "$USE_NICE" -eq 1 ]; then
