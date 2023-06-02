@@ -1,11 +1,7 @@
 import numpy as np
 
+from autobench.params import rows, cols, name
 from src.bench import bench
-
-rows = [2 ** x for x in range(10, 26 + 1)]
-cols = [2 ** x for x in range(1, 4 + 1)]
-
-name = 'webb'
 
 errors_sum = np.zeros((len(rows), len(cols)))
 speedups_sum = np.zeros((len(rows), len(cols)))
