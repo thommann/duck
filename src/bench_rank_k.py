@@ -3,8 +3,10 @@ import argparse
 from profiling import print_error_and_speedup
 
 
-def bench_rank_k(name: str, dimensions: tuple[int, int], k: int, database: str | None = None) -> tuple[
-    float, float, float, float]:
+def bench_rank_k(name: str,
+                 dimensions: tuple[int, int],
+                 k: int,
+                 database: str | None = None) -> tuple[float, float, float, float]:
     """
     Compute the error and speedup of the Kronecker sum and sumproduct algorithms compared to the original algorithm.
     :param name:
