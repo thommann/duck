@@ -36,7 +36,7 @@ def bench_rank_k(name: str,
         column_idx = r * cols
         kronecker_sum += \
             f"((SELECT SUM({column}{column_idx}) FROM {matrix_a}) * (SELECT SUM(column0) FROM {matrix_b})) + "
-        for r_prime in range(1, k + 1):
+        for r_prime in range(k):
             column_idx_prime = r_prime * cols
             kronecker_sumproduct += \
                 f"((SELECT SUM({column}{column_idx} * {column}{column_idx_prime}) FROM {matrix_a}) * " \
