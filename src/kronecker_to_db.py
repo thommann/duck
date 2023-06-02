@@ -2,7 +2,7 @@ import argparse
 
 import duckdb
 
-from matrix_to_table import matrix_to_table
+from src.matrix_to_table import matrix_to_table
 
 
 def kronecker_to_db(input: str, input_a: str, input_b: str, database: str, k: int = 1) -> None:

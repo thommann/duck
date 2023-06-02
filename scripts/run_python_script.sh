@@ -23,6 +23,10 @@ source venv/bin/activate
 filename=$(basename -- "$1")
 name="${filename%.*}"
 
+# Set current working directory to python file's directory
+export PYTHONPATH="$PWD"/
+echo $PYTHONPATH
+
 # Your command
 if [ "$USE_NICE" -eq 1 ]; then
     nohup nice python3 "$1" >& out/"$name".log &

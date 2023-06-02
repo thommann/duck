@@ -2,7 +2,7 @@ import argparse
 
 import numpy as np
 
-from kronecker import kronecker_decomposition
+from src.kronecker import kronecker_decomposition
 
 
 def matrix_to_kronecker(input: str, output_a: str, output_b: str, k: int = 1, compress_cols: bool = False) -> None:

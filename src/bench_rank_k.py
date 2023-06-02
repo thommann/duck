@@ -1,6 +1,6 @@
 import argparse
 
-from profiling import print_error_and_speedup
+from src.profiling import print_error_and_speedup
 
 
 def bench_rank_k(name: str,

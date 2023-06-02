@@ -1,6 +1,6 @@
 import argparse
 
-from profiling import print_error_and_speedup
+from src.profiling import print_error_and_speedup
 
 
 def bench(name: str, dimensions: tuple[int, int]) -> tuple[float, float, float, float]:
@@ -12,9 +12,7 @@ def bench(name: str, dimensions: tuple[int, int]) -> tuple[float, float, float, 
     """
     full_name = f"{name}_{dimensions[0]}x{dimensions[1]}"
     database = f"data/databases/{full_name}.db"
-    original = full_name
-    matrix_a = f"{original}_a"
-    matrix_b = f"{original}_b"
+    matrix_a, matrix_b, original = "A", "B", "C"
 
     column = "column0" if dimensions[1] > 10 else "column"
 

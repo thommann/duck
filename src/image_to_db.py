@@ -1,8 +1,8 @@
 import argparse
 
-from image_to_matrix import image_to_matrix
-from kronecker_to_db import kronecker_to_db
-from matrix_to_kronecker import matrix_to_kronecker
+from src.image_to_matrix import image_to_matrix
+from src.kronecker_to_db import kronecker_to_db
+from src.matrix_to_kronecker import matrix_to_kronecker
 
 
 def image_to_db(input_path: str, dimensions: tuple, name: str, k: int = 1, compress_cols: bool = False) -> None:
