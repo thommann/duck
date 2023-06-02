@@ -12,7 +12,7 @@ for r in range(len(rows)):
     row = rows[r]
     for c in range(len(cols)):
         col = cols[c]
-        print(f"row: {row}, col: {col}", flush=True)
+        print(f"rows: {row:,}, cols: {col:,}", flush=True)
         error_sum, speedup_sum, error_sumproduct, speedup_sumproduct = bench(name, (row, col))
         errors_sum[r, c] = error_sum
         speedups_sum[r, c] = speedup_sum
