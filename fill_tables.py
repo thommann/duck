@@ -8,7 +8,7 @@ name = 'webb'
 
 for row in rows:
     for col in cols:
-        print(f"row: {row}, col: {col}")
+        print(f"row: {row}, col: {col}", flush=True)
         input = f"data/matrices/{name}_{row}x{col}.csv"
         input_a = input.replace(".csv", "_a.csv")
         input_b = input.replace(".csv", "_b.csv")
