@@ -7,7 +7,7 @@ cols = [2 ** x for x in range(1, 5)]
 max_k = 10
 k = 2
 
-cc = True
+cc = False
 
 image = 'data/images/webb.png'
 name = 'webb'

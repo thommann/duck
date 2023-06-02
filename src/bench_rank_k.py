@@ -1,6 +1,14 @@
 import argparse
 
+import numpy as np
+
 from src.profiling import print_error_and_speedup
+
+
+def col_indices(col_idx: int, b_cols: int) -> tuple[int, int]:
+    col_idx_a = col_idx // b_cols
+    col_idx_b = col_idx % b_cols
+    return col_idx_a, col_idx_b
 
 
 def bench_rank_k(name: str,
@@ -34,16 +42,27 @@ def bench_rank_k(name: str,
     SELECT SUM({column}0 * {column}1) AS result FROM {original};
     """
 
+    b_cols = np.loadtxt(f"data/bcols/{full_name}.csv", delimiter=",", dtype=int)
+    a_cols = cols // b_cols
+
+    column_a = "column0" if a_cols > 10 else "column"
+    column_b = "column0" if b_cols > 10 else "column"
+
+    col_0_a, col_0_b = col_indices(0, b_cols)
+    col_1_a, col_1_b = col_indices(1, b_cols)
+
     kronecker_sum = kronecker_sumproduct = "SELECT "
     for r in range(k):
-        column_idx = r * cols
+        a_0_idx = r * a_cols + col_0_a
+        b_0_idx = r * b_cols + col_0_b
         kronecker_sum += \
-            f"((SELECT SUM({column}{column_idx}) FROM {matrix_a}) * (SELECT SUM(column0) FROM {matrix_b})) + "
+            f"((SELECT SUM({column_a}{a_0_idx}) FROM {matrix_a}) * (SELECT SUM({column_b}{b_0_idx}) FROM {matrix_b})) + "
         for r_prime in range(k):
-            column_idx_prime = r_prime * cols
+            a_1_idx = r_prime * a_cols + col_1_a
+            b_1_idx = r_prime * b_cols + col_1_b
             kronecker_sumproduct += \
-                f"((SELECT SUM({column}{column_idx} * {column}{column_idx_prime}) FROM {matrix_a}) * " \
-                f"(SELECT SUM(column0 * column0) FROM {matrix_b})) + "
+                f"((SELECT SUM({column_a}{a_0_idx} * {column_a}{a_1_idx}) FROM {matrix_a}) * " \
+                f"(SELECT SUM({column_b}{b_0_idx} * {column_b}{b_1_idx}) FROM {matrix_b})) + "
     kronecker_sum = kronecker_sum[:-2] + "AS result;"
     kronecker_sumproduct = kronecker_sumproduct[:-2] + "AS result;"
 

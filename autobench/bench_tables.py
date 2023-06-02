@@ -18,7 +18,7 @@ for r, row in enumerate(rows):
         errors_sumproduct[r, c] = error_sumproduct
         speedups_sumproduct[r, c] = speedup_sumproduct
 
-np.savetxt('data/results/sum_errors.csv', errors_sum, delimiter=',')
-np.savetxt('data/results/sum_speedups.csv', speedups_sum, delimiter=',')
-np.savetxt('data/results/sumproduct_errors.csv', errors_sumproduct, delimiter=',')
-np.savetxt('data/results/sumproduct_speedups.csv', speedups_sumproduct, delimiter=',')
+np.savetxt(f'data/results/sum_errors_rank_{k}.csv', errors_sum, delimiter=',')
+np.savetxt(f'data/results/sum_speedups_rank_{k}.csv', speedups_sum, delimiter=',')
+np.savetxt(f'data/results/sumproduct_errors_rank_{k}.csv', errors_sumproduct, delimiter=',')
+np.savetxt(f'data/results/sumproduct_speedups_rank_{k}.csv', speedups_sumproduct, delimiter=',')

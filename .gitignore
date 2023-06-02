@@ -16,5 +16,8 @@ data/profiles/*
 data/svd/*
 !data/svd/.gitkeep
 
+data/bcols/*
+!data/bcols/.gitkeep
+
 *.log
 *.pid

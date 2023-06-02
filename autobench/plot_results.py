@@ -1,9 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from autobench.params import rows_base_2, cols
-
-rows = rows_base_2
+from autobench.params import rows, cols
 
 errors_sum = np.loadtxt('data/results/sum_errors.csv', delimiter=',')
 speedups_sum = np.loadtxt('data/results/sum_speedups.csv', delimiter=',')
