@@ -9,14 +9,8 @@ def matrix_to_kronecker(input: str, output_a: str, output_b: str, k: int = 1, co
     matrix = np.loadtxt(input, delimiter=',', ndmin=2)
 
     a_matrices, b_matrices = kronecker_decomposition(matrix, rank=k, compress_cols=compress_cols)
-    if k == 1:
-        np.savetxt(output_a, a_matrices[0], delimiter=',')
-        np.savetxt(output_b, b_matrices[0], delimiter=',')
-    else:
-        for r in range(k):
-            rank = r + 1
-            np.savetxt(output_a.replace('.csv', f'_{rank}.csv'), a_matrices[r], delimiter=',')
-            np.savetxt(output_b.replace('.csv', f'_{rank}.csv'), b_matrices[r], delimiter=',')
+    np.savetxt(output_a, a_matrices, delimiter=',')
+    np.savetxt(output_b, b_matrices, delimiter=',')
 
 
 def parse_args() -> dict:

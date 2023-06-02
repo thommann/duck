@@ -66,7 +66,7 @@ def compute_shapes(shape: tuple[int, int], compress_cols: bool = False) -> tuple
 
 def kronecker_decomposition(matrix: np.ndarray,
                             rank: int = 1,
-                            compress_cols: bool = False) -> tuple[list[np.ndarray], list[np.ndarray]]:
+                            compress_cols: bool = False) -> tuple[np.ndarray, np.ndarray]:
     """
     :param matrix: 2D matrix
     :param rank: rank of the decomposition
@@ -79,6 +79,9 @@ def kronecker_decomposition(matrix: np.ndarray,
     u_mat, s_vec, vh_mat = np.linalg.svd(massaged_matrix, full_matrices=False)
     print("Done.", flush=True)
     v_mat = vh_mat.transpose()
-    a_matrices = [reshape(u_mat[:, i], shape_a) * np.sqrt(s_vec[i]) for i in range(rank)]
-    b_matrices = [reshape(v_mat[:, i], shape_b) * np.sqrt(s_vec[i]) for i in range(rank)]
+    scales = np.sqrt(s_vec)
+    u_mat_scaled = u_mat * scales
+    v_mat_scaled = v_mat * scales
+    a_matrices = np.hstack([reshape(u_mat_scaled[:, i], shape_a) for i in range(rank)])
+    b_matrices = np.hstack([reshape(v_mat_scaled[:, i], shape_b) for i in range(rank)])
     return a_matrices, b_matrices

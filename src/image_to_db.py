@@ -16,7 +16,7 @@ def image_to_db(input_path: str, dimensions: tuple, name: str, k: int = 1, compr
     database = f"data/databases/{full_name}{rank_append}.db"
     image_to_matrix(input_path, original, dimensions)
     matrix_to_kronecker(original, matrix_a, matrix_b, k=k, compress_cols=compress_cols)
-    kronecker_to_db(original, matrix_a, matrix_b, database, k=k)
+    kronecker_to_db(original, matrix_a, matrix_b, database)
 
 
 def parse_args() -> dict:

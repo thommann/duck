@@ -15,12 +15,13 @@ def bench_rank_k(name: str,
     :param k: Rank of the Kronecker approximation
     :return: Returns the error and speedup of the Kronecker sum and sumproduct algorithms.
     """
-    full_name = f"{name}_{dimensions[0]}x{dimensions[1]}"
+    rows, cols = dimensions
+    full_name = f"{name}_{rows}x{cols}"
     if database is None:
         database = f"data/databases/{full_name}_rank_{k}.db"
     matrix_a, matrix_b, original = "A", "B", "C"
 
-    column = "column0" if dimensions[1] > 10 else "column"
+    column = "column0" if cols > 10 else "column"
 
     original_sum = f"""
     SELECT SUM({column}0) AS result FROM {original};
@@ -31,15 +32,15 @@ def bench_rank_k(name: str,
     """
 
     kronecker_sum = kronecker_sumproduct = "SELECT "
-    for rank in range(1, k + 1):
+    for r in range(k):
+        column_idx = r * cols
         kronecker_sum += \
-            f"((SELECT SUM(column0) FROM {matrix_a}_{rank}) * (SELECT SUM(column0) FROM {matrix_b}_{rank})) + "
-        for rank_prime in range(1, k + 1):
+            f"((SELECT SUM({column}{column_idx}) FROM {matrix_a}) * (SELECT SUM(column0) FROM {matrix_b})) + "
+        for r_prime in range(1, k + 1):
+            column_idx_prime = r_prime * cols
             kronecker_sumproduct += \
-                f"((SELECT SUM(a.column0 * a_prime.column1) " \
-                f"FROM {matrix_a}_{rank} AS a JOIN {matrix_a}_{rank_prime} AS a_prime ON a.id = a_prime.id) * " \
-                f"(SELECT SUM(b.column0 * b_prime.column0) " \
-                f"FROM {matrix_b}_{rank} AS b JOIN {matrix_b}_{rank_prime} AS b_prime ON b.id = b_prime.id)) + "
+                f"((SELECT SUM({column}{column_idx} * {column}{column_idx_prime}) FROM {matrix_a}) * " \
+                f"(SELECT SUM(column0 * column0) FROM {matrix_b})) + "
     kronecker_sum = kronecker_sum[:-2] + "AS result;"
     kronecker_sumproduct = kronecker_sumproduct[:-2] + "AS result;"
 
