@@ -9,6 +9,7 @@ def bench_rank_k(name: str,
                  database: str | None = None) -> tuple[float, float, float, float]:
     """
     Compute the error and speedup of the Kronecker sum and sumproduct algorithms compared to the original algorithm.
+    :param database:
     :param name:
     :param dimensions:
     :param k: Rank of the Kronecker approximation
