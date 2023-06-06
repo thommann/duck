@@ -8,7 +8,7 @@ max_k = 10
 k = 2
 
 compress_cols = False
-single_column = False
+single_column = True
 
 image = 'data/images/webb.png'
 name = 'webb'

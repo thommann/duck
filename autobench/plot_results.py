@@ -36,7 +36,11 @@ col_method_param = "single" if single_column else "compressed" if compress_cols 
 # plot relative error sum
 relative_errors_sum = np.abs(results_sum_orig - results_sum_kron) / np.abs(results_sum_orig)
 plot(relative_errors_sum, f'Sum Rel. Error (rank {k}, {col_method_param})', 'Rel. Error',
-     f'sum_error{col_suffix}{rank_suffix}')
+     f'sum_rel_error{col_suffix}{rank_suffix}')
+# plot absolute error sum
+absolute_errors_sum = np.abs(results_sum_orig - results_sum_kron)
+plot(absolute_errors_sum, f'Sum Abs. Error (rank {k}, {col_method_param})', 'Abs. Error',
+     f'sum_abs_error{col_suffix}{rank_suffix}')
 # plot speedup sum
 speedups_sum = times_sum_orig / times_sum_kron
 plot(speedups_sum, f'Sum Speedup (rank {k}, {col_method_param})', 'Speedup', f'sum_speedup{col_suffix}{rank_suffix}')
@@ -44,8 +48,14 @@ plot(speedups_sum, f'Sum Speedup (rank {k}, {col_method_param})', 'Speedup', f's
 relative_errors_sumproduct = np.abs(results_sumproduct_orig - results_sumproduct_kron) / np.abs(
     results_sumproduct_orig)
 plot(relative_errors_sumproduct, f'SumProduct Rel. Error (rank {k}, {col_method_param})', 'Rel. Error',
-     f'sumproduct_error{col_suffix}{rank_suffix}')
+     f'sumproduct_rel_error{col_suffix}{rank_suffix}')
+# plot absolute error sumproduct
+absolute_errors_sumproduct = np.abs(results_sumproduct_orig - results_sumproduct_kron)
+plot(absolute_errors_sumproduct, f'SumProduct Abs. Error (rank {k}, {col_method_param})', 'Abs. Error',
+     f'sumproduct_abs_error{col_suffix}{rank_suffix}')
 # plot speedup sumproduct
 speedups_sumproduct = times_sumproduct_orig / times_sumproduct_kron
 plot(speedups_sumproduct, f'SumProduct Speedup (rank {k}, {col_method_param})', 'Speedup',
      f'sumproduct_speedup{col_suffix}{rank_suffix}')
+
+print("Done!")
