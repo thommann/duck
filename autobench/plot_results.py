@@ -31,3 +31,9 @@ col_method_param = "single" if single_column else "compressed" if compress_cols 
 plot(errors_sum, f'Sum Error (rank {k}, {col_method_param})', 'Error', f'sum_error{col_suffix}{rank_suffix}')
 # plot sum speedup
 plot(speedups_sum, f'Sum Speedup (rank {k}, {col_method_param})', 'Speedup', f'sum_speedup{col_suffix}{rank_suffix}')
+# plot sumproduct error
+plot(errors_sumproduct, f'SumProduct Error (rank {k}, {col_method_param})', 'Error',
+     f'sumproduct_error{col_suffix}{rank_suffix}')
+# plot sumproduct speedup
+plot(speedups_sumproduct, f'SumProduct Speedup (rank {k}, {col_method_param})', 'Speedup',
+     f'sumproduct_speedup{col_suffix}{rank_suffix}')

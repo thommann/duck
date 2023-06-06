@@ -1,13 +1,13 @@
 import argparse
 
-from src.profiling import print_error_and_speedup
+from src.profiling import query_profiling, query_results
 
 
-def bench_rank_k(name: str,
-                 dimensions: tuple[int, int],
-                 k: int,
-                 max_rank: int = 10,
-                 database: str | None = None) -> tuple[float, float, float, float]:
+def bench_sc(name: str,
+             dimensions: tuple[int, int],
+             k: int,
+             max_rank: int = 10,
+             database: str | None = None) -> tuple[tuple, tuple, tuple, tuple]:
     """
     Compute the error and speedup of the Kronecker sum and sumproduct algorithms compared to the original algorithm.
     :param database:
@@ -52,13 +52,15 @@ def bench_rank_k(name: str,
     kronecker_sumproduct = kronecker_sumproduct[:-2] + "AS result;"
 
     print("SUM", flush=True)
-    sum_error, sum_speedup = print_error_and_speedup(original_sum, kronecker_sum, database)
+    sum_results = query_results(original_sum, kronecker_sum, database)
+    sum_times = query_profiling(original_sum, kronecker_sum, database)
     print(flush=True)
     print("SUM-product", flush=True)
-    sumproduct_error, sumproduct_speedup = print_error_and_speedup(original_sumproduct, kronecker_sumproduct, database)
+    sumproduct_results = query_results(original_sumproduct, kronecker_sumproduct, database)
+    sumproduct_times = query_profiling(original_sumproduct, kronecker_sumproduct, database)
     print(flush=True)
 
-    return sum_error, sum_speedup, sumproduct_error, sumproduct_speedup
+    return sum_results, sum_times, sumproduct_results, sumproduct_times
 
 
 def parse_args() -> dict:
@@ -90,4 +92,4 @@ def parse_args() -> dict:
 
 if __name__ == "__main__":
     args = parse_args()
-    bench_rank_k(args["name"], args["dimensions"], args["rank"], database=args["database"])
+    bench_sc(args["name"], args["dimensions"], args["rank"], database=args["database"])
