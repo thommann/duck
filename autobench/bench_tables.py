@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 
 from autobench.params import rows, cols, name, max_k, k, compress_cols, single_column
@@ -16,6 +18,7 @@ max_rank_suffix = f"_rank_{max_k}" if max_k > 1 else ""
 
 for r, row in enumerate(rows):
     for c, col in enumerate(cols):
+        start = time.time()
         print(f"rows: {row:,}, cols: {col:,}", flush=True)
         database = f"data/databases/{name}_{row}x{col}{col_suffix}{max_rank_suffix}.db"
         error_sum, speedup_sum, error_sumproduct, speedup_sumproduct = bench(name, (row, col), k,
@@ -24,6 +27,8 @@ for r, row in enumerate(rows):
         speedups_sum[r, c] = speedup_sum
         errors_sumproduct[r, c] = error_sumproduct
         speedups_sumproduct[r, c] = speedup_sumproduct
+        end = time.time()
+        print(f"Done! ({int(end - start)}s)", flush=True)
 
 rank_suffix = f"_rank_{k}" if k > 1 else ""
 np.savetxt(f'data/results/sum_errors{col_suffix}{rank_suffix}.csv', errors_sum, delimiter=',')

@@ -45,7 +45,6 @@ def image_to_db(input_path: str, dimensions: tuple, name: str, k: int = 1,
 
     # 3. Create database from matrices A, B and C
     kronecker_to_db(matrix_c, matrix_a, matrix_b, database)
-    print("All done!", flush=True)
 
 
 def parse_args() -> dict:
