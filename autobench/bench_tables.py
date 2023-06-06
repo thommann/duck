@@ -30,10 +30,14 @@ for r, row in enumerate(rows):
         errors_sumproduct[r, c] = error_sumproduct
         speedups_sumproduct[r, c] = speedup_sumproduct
         end = time.time()
+
         print(f"Done! ({int(end - start)}s)", flush=True)
+        print()
 
 rank_suffix = f"_rank_{k}" if k > 1 else ""
 np.savetxt(f'data/results/sum_errors{col_suffix}{rank_suffix}.csv', errors_sum, delimiter=',')
 np.savetxt(f'data/results/sum_speedups{col_suffix}{rank_suffix}.csv', speedups_sum, delimiter=',')
 np.savetxt(f'data/results/sumproduct_errors{col_suffix}{rank_suffix}.csv', errors_sumproduct, delimiter=',')
 np.savetxt(f'data/results/sumproduct_speedups{col_suffix}{rank_suffix}.csv', speedups_sumproduct, delimiter=',')
+
+print("All done!")

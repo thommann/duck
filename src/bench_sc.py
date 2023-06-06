@@ -23,27 +23,30 @@ def bench_rank_k(name: str,
         database = f"data/databases/{full_name}_rank_{max_rank}.db"
     matrix_a, matrix_b, original = "A", "B", "C"
 
-    column = "column0" if cols > 10 else "column"
-    column_ab = "column0" if cols * max_rank > 10 else "column"
+    column_format = "03d" if cols > 100 else "02d" if cols > 10 else "01d"
+    column_format_ab = "03d" if cols * max_rank > 100 else "02d" if cols * max_rank > 10 else "01d"
 
     original_sum = f"""
-    SELECT SUM({column}0) AS result FROM {original};
+    SELECT SUM(column{0:{column_format}}) AS result FROM {original};
     """
 
     original_sumproduct = f"""
-    SELECT SUM({column}0 * {column}1) AS result FROM {original};
+    SELECT SUM(column{0:{column_format}} * column{1:{column_format}}) AS result FROM {original};
     """
 
     kronecker_sum = kronecker_sumproduct = "SELECT "
     for r in range(k):
         idx_0 = r * cols
         kronecker_sum += \
-            f"((SELECT SUM({column_ab}{idx_0}) FROM {matrix_a}) * (SELECT SUM({column_ab}{idx_0}) FROM {matrix_b})) + "
+            f"((SELECT SUM(column{idx_0:{column_format_ab}}) FROM {matrix_a}) * " \
+            f"(SELECT SUM(column{idx_0:{column_format_ab}}) FROM {matrix_b})) + "
         for r_prime in range(k):
             idx_1 = r_prime * cols
             kronecker_sumproduct += \
-                f"((SELECT SUM({column_ab}{idx_0} * {column_ab}{idx_1}) FROM {matrix_a}) * " \
-                f"(SELECT SUM({column_ab}{idx_0} * {column_ab}{idx_1}) FROM {matrix_b})) + "
+                f"((SELECT SUM(column{idx_0:{column_format_ab}} * column{idx_1:{column_format_ab}}) " \
+                f"FROM {matrix_a}) * " \
+                f"(SELECT SUM(column{idx_0:{column_format_ab}} * column{idx_1:{column_format_ab}}) " \
+                f"FROM {matrix_b})) + "
 
     kronecker_sum = kronecker_sum[:-2] + "AS result;"
     kronecker_sumproduct = kronecker_sumproduct[:-2] + "AS result;"
