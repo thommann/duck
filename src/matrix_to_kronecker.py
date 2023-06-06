@@ -81,8 +81,8 @@ def matrix_to_kronecker_columns(input_c: str,
 
     prefix = 'data/svd/'
 
-    a_mat = np.zeros((shape_a[0], matrix.shape[1]))
-    b_mat = np.zeros((shape_b[0], matrix.shape[1]))
+    a_mat = np.zeros((shape_a[0], matrix.shape[1] * k))
+    b_mat = np.zeros((shape_b[0], matrix.shape[1] * k))
     for col in range(matrix.shape[1]):
         suffix = f'_{shape_c[0]}x{shape_c[1]}_col_{col}.csv'
         # 1. SVD
@@ -91,10 +91,10 @@ def matrix_to_kronecker_columns(input_c: str,
         # 2. Kronecker decomposition
         a_col, b_col = try_kronecker_decomposition(output_a, output_b, initialized, u_mat, s_vec, vh_mat, shape_a,
                                                    shape_b, k)
-        assert a_col.shape[1] == 1
-        assert b_col.shape[1] == 1
-        a_mat[:, col] = a_col
-        b_mat[:, col] = b_col
+        assert a_col.shape[1] == k
+        assert b_col.shape[1] == k
+        a_mat[:, col * k:(col + 1) * k] = a_col
+        b_mat[:, col * k:(col + 1) * k] = b_col
 
     return a_mat, b_mat
 

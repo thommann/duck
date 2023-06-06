@@ -17,7 +17,7 @@ def kronecker_to_db(input_c: str,
     name_a, name_b, name = "A", "B", "C"
 
     # Check if the database file already exists and delete it if it does
-    if not os.path.exists(database):
+    if os.path.exists(database):
         os.remove(database)
 
     con = duckdb.connect(database)
