@@ -1,7 +1,7 @@
 import numpy as np
 
 from autobench.params import rows, cols, name, max_k, k, compress_cols, single_column
-from src.bench import bench_rank_k
+from src.bench import bench
 
 assert not (compress_cols and single_column)
 assert k <= max_k
@@ -18,7 +18,8 @@ for r, row in enumerate(rows):
     for c, col in enumerate(cols):
         print(f"rows: {row:,}, cols: {col:,}", flush=True)
         database = f"data/databases/{name}_{row}x{col}{col_suffix}{max_rank_suffix}.db"
-        error_sum, speedup_sum, error_sumproduct, speedup_sumproduct = bench_rank_k(name, (row, col), k, database)
+        error_sum, speedup_sum, error_sumproduct, speedup_sumproduct = bench(name, (row, col), k,
+                                                                             max_rank=max_k, database=database)
         errors_sum[r, c] = error_sum
         speedups_sum[r, c] = speedup_sum
         errors_sumproduct[r, c] = error_sumproduct

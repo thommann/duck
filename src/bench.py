@@ -11,17 +11,20 @@ def col_indices(col_idx: int, b_cols: int) -> tuple[int, int]:
     return col_idx_a, col_idx_b
 
 
-def bench_rank_k(name: str,
-                 dimensions: tuple[int, int],
-                 k: int,
-                 database: str | None = None,
-                 cc: bool = False) -> tuple[float, float, float, float]:
+def bench(name: str,
+          dimensions: tuple[int, int],
+          k: int,
+          max_rank: int = 10,
+          database: str | None = None,
+          cc: bool = False) -> tuple[float, float, float, float]:
     """
     Compute the error and speedup of the Kronecker sum and sumproduct algorithms compared to the original algorithm.
     :param database:
     :param name:
     :param dimensions:
     :param k: Rank of the Kronecker approximation
+    :param max_rank: Rank of the kronecker decomposition
+    :param cc: Whether to compress the columns
     :return: Returns the error and speedup of the Kronecker sum and sumproduct algorithms.
     """
     rows, cols = dimensions
@@ -29,7 +32,7 @@ def bench_rank_k(name: str,
     if cc:
         full_name += "_cc"
     if database is None:
-        database = f"data/databases/{full_name}_rank_{k}.db"
+        database = f"data/databases/{full_name}_rank_{max_rank}.db"
     matrix_a, matrix_b, original = "A", "B", "C"
 
     column = "column0" if cols > 10 else "column"
@@ -45,8 +48,8 @@ def bench_rank_k(name: str,
     b_cols = np.loadtxt(f"data/bcols/{full_name}.csv", delimiter=",", dtype=int)
     a_cols = cols // b_cols
 
-    column_a = "column0" if a_cols * k > 10 else "column"
-    column_b = "column0" if b_cols * k > 10 else "column"
+    column_a = "column0" if a_cols * max_rank > 10 else "column"
+    column_b = "column0" if b_cols * max_rank > 10 else "column"
 
     col_0_a, col_0_b = col_indices(0, b_cols)
     col_1_a, col_1_b = col_indices(1, b_cols)
@@ -105,4 +108,4 @@ def parse_args() -> dict:
 
 if __name__ == "__main__":
     args = parse_args()
-    bench_rank_k(args["name"], args["dimensions"], args["rank"], database=args["database"])
+    bench(args["name"], args["dimensions"], args["rank"], database=args["database"])
