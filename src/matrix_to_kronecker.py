@@ -51,7 +51,8 @@ def matrix_to_kronecker(input_c: str,
 
     shape_a, shape_b = compute_shapes(shape_c, compress_cols=compress_cols)
 
-    np.savetxt(input_c.replace("/matrices/", "/bcols/"), [shape_b[1]], delimiter=',')
+    if compress_cols:
+        np.savetxt(input_c.replace("/matrices/", "/bcols/"), [shape_b[1]], delimiter=',')
 
     cc = '_cc' if compress_cols else ''
     prefix, suffix = 'data/svd/', f'_{shape_c[0]}x{shape_c[1]}{cc}.csv'

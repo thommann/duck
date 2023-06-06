@@ -22,7 +22,9 @@ for r, row in enumerate(rows):
         print(f"rows: {row:,}, cols: {col:,}", flush=True)
         database = f"data/databases/{name}_{row}x{col}{col_suffix}{max_rank_suffix}.db"
         error_sum, speedup_sum, error_sumproduct, speedup_sumproduct = bench(name, (row, col), k,
-                                                                             max_rank=max_k, database=database)
+                                                                             max_rank=max_k,
+                                                                             database=database,
+                                                                             cc=compress_cols)
         errors_sum[r, c] = error_sum
         speedups_sum[r, c] = speedup_sum
         errors_sumproduct[r, c] = error_sumproduct
