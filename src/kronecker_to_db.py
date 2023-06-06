@@ -16,11 +16,9 @@ def kronecker_to_db(input_c: str,
     """
     name_a, name_b, name = "A", "B", "C"
 
-    # Delete the database if it already exists
-    try:
+    # Check if the database file already exists and delete it if it does
+    if not os.path.exists(database):
         os.remove(database)
-    except OSError:
-        pass
 
     con = duckdb.connect(database)
     matrix_to_table(con, input_c, name)
