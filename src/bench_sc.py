@@ -6,26 +6,25 @@ from src.profiling import print_error_and_speedup
 def bench_rank_k(name: str,
                  dimensions: tuple[int, int],
                  k: int,
-                 database: str | None = None,
-                 cc: bool = False) -> tuple[float, float, float, float]:
+                 max_rank: int = 10,
+                 database: str | None = None) -> tuple[float, float, float, float]:
     """
     Compute the error and speedup of the Kronecker sum and sumproduct algorithms compared to the original algorithm.
     :param database:
     :param name:
     :param dimensions:
     :param k: Rank of the Kronecker approximation
+    :param max_rank: Maximum rank of the Kronecker decomposition
     :return: Returns the error and speedup of the Kronecker sum and sumproduct algorithms.
     """
     rows, cols = dimensions
-    full_name = f"{name}_{rows}x{cols}"
-    if cc:
-        full_name += "_cc"
+    full_name = f"{name}_{rows}x{cols}_sc"
     if database is None:
-        database = f"data/databases/{full_name}_rank_{k}.db"
+        database = f"data/databases/{full_name}_rank_{max_rank}.db"
     matrix_a, matrix_b, original = "A", "B", "C"
 
     column = "column0" if cols > 10 else "column"
-    column_ab = "column0" if cols * k > 10 else "column"
+    column_ab = "column0" if cols * max_rank > 10 else "column"
 
     original_sum = f"""
     SELECT SUM({column}0) AS result FROM {original};
