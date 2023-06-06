@@ -36,12 +36,12 @@ def bench_sc(name: str,
 
     kronecker_sum = kronecker_sumproduct = "SELECT "
     for r in range(k):
-        idx_0 = r * cols
+        idx_0 = 0 * max_rank + r
         kronecker_sum += \
             f"((SELECT SUM(column{idx_0:{column_format_ab}}) FROM {matrix_a}) * " \
             f"(SELECT SUM(column{idx_0:{column_format_ab}}) FROM {matrix_b})) + "
         for r_prime in range(k):
-            idx_1 = r_prime * cols
+            idx_1 = 1 * max_rank + r
             kronecker_sumproduct += \
                 f"((SELECT SUM(column{idx_0:{column_format_ab}} * column{idx_1:{column_format_ab}}) " \
                 f"FROM {matrix_a}) * " \
@@ -51,14 +51,10 @@ def bench_sc(name: str,
     kronecker_sum = kronecker_sum[:-2] + "AS result;"
     kronecker_sumproduct = kronecker_sumproduct[:-2] + "AS result;"
 
-    print("SUM", flush=True)
     sum_results = query_results(original_sum, kronecker_sum, database)
     sum_times = query_profiling(original_sum, kronecker_sum, database)
-    print(flush=True)
-    print("SUM-product", flush=True)
     sumproduct_results = query_results(original_sumproduct, kronecker_sumproduct, database)
     sumproduct_times = query_profiling(original_sumproduct, kronecker_sumproduct, database)
-    print(flush=True)
 
     return sum_results, sum_times, sumproduct_results, sumproduct_times
 

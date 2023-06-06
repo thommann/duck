@@ -79,14 +79,10 @@ def bench(name: str,
     kronecker_sum = kronecker_sum[:-2] + "AS result;"
     kronecker_sumproduct = kronecker_sumproduct[:-2] + "AS result;"
 
-    print("SUM", flush=True)
     sum_results = query_results(original_sum, kronecker_sum, database)
     sum_times = query_profiling(original_sum, kronecker_sum, database)
-    print(flush=True)
-    print("SUM-product", flush=True)
     sumproduct_results = query_results(original_sumproduct, kronecker_sumproduct, database)
     sumproduct_times = query_profiling(original_sumproduct, kronecker_sumproduct, database)
-    print(flush=True)
 
     return sum_results, sum_times, sumproduct_results, sumproduct_times
 
