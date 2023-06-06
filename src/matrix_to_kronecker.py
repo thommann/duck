@@ -85,9 +85,10 @@ def matrix_to_kronecker_columns(input_c: str,
     b_mat = np.zeros((shape_b[0], matrix.shape[1]))
     for col in range(matrix.shape[1]):
         suffix = f'_{shape_c[0]}x{shape_c[1]}_col_{col}.csv'
-        u_mat, s_vec, vh_mat, initialized = try_svd(prefix, suffix, initialized, matrix[:, col], shape_a)
-        assert u_mat.shape[1] == 1
-        assert vh_mat.shape[0] == 1
+        # 1. SVD
+        u_mat, s_vec, vh_mat, initialized = try_svd(prefix, suffix, initialized, np.atleast_2d(matrix[:, col]).T,
+                                                    shape_a)
+        # 2. Kronecker decomposition
         a_col, b_col = try_kronecker_decomposition(output_a, output_b, initialized, u_mat, s_vec, vh_mat, shape_a,
                                                    shape_b, k)
         assert a_col.shape[1] == 1
