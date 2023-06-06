@@ -5,7 +5,8 @@ import numpy as np
 from src.kronecker import kronecker_decomposition, svd, compute_shapes
 
 
-def try_svd(prefix: str, suffix: str, initialized: bool, matrix: np.ndarray, shape_a: tuple[int, int]):
+def try_svd(suffix: str, initialized: bool, matrix: np.ndarray, shape_a: tuple[int, int]):
+    prefix = 'data/svd/'
     try:
         if not initialized:
             raise OSError
@@ -55,13 +56,53 @@ def matrix_to_kronecker(input_c: str,
         np.savetxt(input_c.replace("/matrices/", "/bcols/"), [shape_b[1]], delimiter=',')
 
     cc = '_cc' if compress_cols else ''
-    prefix, suffix = 'data/svd/', f'_{shape_c[0]}x{shape_c[1]}{cc}.csv'
+    suffix = f'_{shape_c[0]}x{shape_c[1]}{cc}.csv'
 
-    u_mat, s_vec, vh_mat, initialized = try_svd(prefix, suffix, initialized, matrix, shape_a)
+    u_mat, s_vec, vh_mat, initialized = try_svd(suffix, initialized, matrix, shape_a)
 
     a_mat, b_mat = try_kronecker_decomposition(output_a, output_b, initialized, u_mat, s_vec, vh_mat, shape_a, shape_b,
                                                k)
 
+    return a_mat, b_mat
+
+
+def column_wise_kronecker(k: int, output_a: str, output_b: str, matrix: np.ndarray, initialized: bool):
+    shape_c = matrix.shape
+    shape_a, shape_b = compute_shapes((shape_c[0], 1))
+    assert shape_a[1] == 1
+    assert shape_b[1] == 1
+
+    a_mat = np.zeros((shape_a[0], matrix.shape[1] * k))
+    b_mat = np.zeros((shape_b[0], matrix.shape[1] * k))
+    for col in range(matrix.shape[1]):
+        suffix = f'_{shape_c[0]}x{shape_c[1]}_col_{col}.csv'
+        # 1. SVD
+        u_mat, s_vec, vh_mat, initialized = try_svd(suffix, initialized, np.atleast_2d(matrix[:, col]).T,
+                                                    shape_a)
+        # 2. Kronecker decomposition
+        col_output_a = output_a.replace(".csv", f"_col_{col}.csv")
+        col_output_b = output_b.replace(".csv", f"_col_{col}.csv")
+        a_cols, b_cols = try_kronecker_decomposition(col_output_a, col_output_b, initialized, u_mat, s_vec, vh_mat,
+                                                     shape_a,
+                                                     shape_b, k)
+        assert a_cols.shape[1] == k
+        assert b_cols.shape[1] == k
+        a_mat[:, col * k:(col + 1) * k] = a_cols
+        b_mat[:, col * k:(col + 1) * k] = b_cols
+
+    return a_mat, b_mat
+
+
+def try_column_wise_kronecker(k: int, output_a: str, output_b: str, matrix: np.ndarray, initialized: bool):
+    try:
+        if not initialized:
+            raise OSError
+        a_mat = np.loadtxt(output_a, delimiter=',')
+        b_mat = np.loadtxt(output_b, delimiter=',')
+    except OSError:
+        a_mat, b_mat = column_wise_kronecker(k, output_a, output_b, matrix, initialized)
+        np.savetxt(output_a, a_mat, delimiter=',')
+        np.savetxt(output_b, b_mat, delimiter=',')
     return a_mat, b_mat
 
 
@@ -74,27 +115,7 @@ def matrix_to_kronecker_columns(input_c: str,
     if matrix is None:
         matrix = np.loadtxt(input_c, delimiter=',', ndmin=2)
 
-    shape_c = matrix.shape
-    shape_a, shape_b = compute_shapes((shape_c[0], 1))
-    assert shape_a[1] == 1
-    assert shape_b[1] == 1
-
-    prefix = 'data/svd/'
-
-    a_mat = np.zeros((shape_a[0], matrix.shape[1] * k))
-    b_mat = np.zeros((shape_b[0], matrix.shape[1] * k))
-    for col in range(matrix.shape[1]):
-        suffix = f'_{shape_c[0]}x{shape_c[1]}_col_{col}.csv'
-        # 1. SVD
-        u_mat, s_vec, vh_mat, initialized = try_svd(prefix, suffix, initialized, np.atleast_2d(matrix[:, col]).T,
-                                                    shape_a)
-        # 2. Kronecker decomposition
-        a_col, b_col = try_kronecker_decomposition(output_a, output_b, initialized, u_mat, s_vec, vh_mat, shape_a,
-                                                   shape_b, k)
-        assert a_col.shape[1] == k
-        assert b_col.shape[1] == k
-        a_mat[:, col * k:(col + 1) * k] = a_col
-        b_mat[:, col * k:(col + 1) * k] = b_col
+    a_mat, b_mat = try_column_wise_kronecker(k, output_a, output_b, matrix, initialized)
 
     return a_mat, b_mat
 
