@@ -5,7 +5,7 @@ rows = sorted(rows_base_2 + rows_base_10)
 cols = [2 ** x for x in range(1, 5)]
 
 max_k = 10
-k = 2
+k = 1
 
 compress_cols = False
 single_column = False

@@ -29,10 +29,9 @@ def bench(name: str,
     """
     rows, cols = dimensions
     full_name = f"{name}_{rows}x{cols}"
-    if cc:
-        full_name += "_cc"
+    col_suffix = "_cc" if cc else ""
     if database is None:
-        database = f"data/databases/{full_name}_rank_{max_rank}.db"
+        database = f"data/databases/{full_name}{col_suffix}_rank_{max_rank}.db"
     matrix_a, matrix_b, original = "A", "B", "C"
 
     column_format = "03d" if cols > 100 else "02d" if cols > 10 else "01d"

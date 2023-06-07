@@ -19,7 +19,7 @@ times_sumproduct_orig = np.zeros((len(rows), len(cols)))
 times_sumproduct_kron = np.zeros((len(rows), len(cols)))
 
 col_suffix = "_cc" if compress_cols else "_sc" if single_column else ""
-max_rank_suffix = f"_rank_{max_k}" if max_k > 1 else ""
+max_rank_suffix = f"_rank_{max_k}"
 
 for r, row in enumerate(rows):
     for c, col in enumerate(cols):
@@ -48,7 +48,7 @@ for r, row in enumerate(rows):
         print(f"Done! ({int(end - start)}s)", flush=True)
         print()
 
-rank_suffix = f"_rank_{k}" if k > 1 else ""
+rank_suffix = f"_rank_{k}"
 np.savetxt(f'data/results/results_sum_orig{col_suffix}{rank_suffix}.csv', results_sum_orig, delimiter=',')
 np.savetxt(f'data/results/results_sum_kron{col_suffix}{rank_suffix}.csv', results_sum_kron, delimiter=',')
 np.savetxt(f'data/results/results_sumproduct_orig{col_suffix}{rank_suffix}.csv', results_sumproduct_orig,

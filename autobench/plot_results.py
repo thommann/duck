@@ -6,7 +6,7 @@ from autobench.params import rows, cols, compress_cols, single_column, k, max_k
 assert k <= max_k
 
 col_suffix = "_cc" if compress_cols else "_sc" if single_column else ""
-rank_suffix = f"_rank_{k}" if k > 1 else ""
+rank_suffix = f"_rank_{k}"
 
 results_sum_orig = np.loadtxt(f'data/results/results_sum_orig{col_suffix}{rank_suffix}.csv', delimiter=',')
 results_sum_kron = np.loadtxt(f'data/results/results_sum_kron{col_suffix}{rank_suffix}.csv', delimiter=',')
