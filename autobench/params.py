@@ -7,7 +7,7 @@ cols = [2 ** x for x in range(1, 5)]
 max_k = 10
 k = 1
 
-compress_cols = False
+compress_cols = True
 single_column = False
 
 image = 'data/images/webb.png'
