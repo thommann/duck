@@ -26,7 +26,7 @@ def image_to_db(input_path: str, dimensions: tuple, name: str, k: int = 1,
     full_name = f"{name}_{dimensions[0]}x{dimensions[1]}"
     matrix_c = f"data/matrices/{full_name}.csv"
     col_append = "_sc" if single_column else "_cc" if compress_cols else ""
-    rank_append = '' if k == 1 else f"_rank_{k}"
+    rank_append = f"_rank_{k}"
     suffix = col_append + rank_append
     matrix_a = matrix_c.replace(".csv", f"{suffix}_a.csv")
     matrix_b = matrix_c.replace(".csv", f"{suffix}_b.csv")
