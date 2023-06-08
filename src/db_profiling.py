@@ -1,6 +1,7 @@
 import json
 
 import duckdb
+import numpy as np
 
 config = """
 PRAGMA enable_profiling='json';
@@ -64,14 +65,12 @@ def query_profiling(original_query: str,
                 res_json = json.loads(res)
                 timings.append(res_json["timing"])
 
-        print(f"EPOCH {epoch + 1}/{epochs} - RUN {run + 1}/{runs}", flush=True)
-
     con.close()
 
     original_timings_truncated = original_timings[1:]
     kronecker_timings_truncated = kronecker_timings[1:]
 
-    average_original_time = sum(original_timings_truncated) / len(original_timings_truncated)
-    average_kronecker_time = sum(kronecker_timings_truncated) / len(kronecker_timings_truncated)
+    average_original_time = float(np.mean(original_timings_truncated))
+    average_kronecker_time = float(np.mean(kronecker_timings_truncated))
 
     return average_original_time, average_kronecker_time

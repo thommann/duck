@@ -7,10 +7,10 @@ cols = [2 ** x for x in range(1, 5)]
 max_k = 10
 k = 1
 
-cc = True
+cc = False
 sc = False
 
-runs = 10
+permutations = 10
 nr_factors = 1
 
 image = 'data/images/webb.png'

@@ -1,17 +1,20 @@
 import numpy as np
 
-from src.profiling import query_results, query_profiling
+from src.db_profiling import query_results, query_profiling
+from src.np_profiling import np_profiling
 from src.queries import queries
 
 
-def bench(name: str,
-          dimensions: tuple[int, int],
-          rank_k: int,
-          col_indices: list[int],
-          max_rank: int = 10,
-          database: str | None = None,
-          sc: bool = False,
-          cc: bool = False) -> tuple[tuple, tuple]:
+def bench(
+        name: str,
+        dimensions: tuple[int, int],
+        rank_k: int,
+        col_indices: list[int],
+        max_rank: int = 10,
+        database: str | None = None,
+        sc: bool = False,
+        cc: bool = False,
+) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]:
     """
     Bench a single matrix.
     :param name: Name of the matrix to benchmark
@@ -22,7 +25,10 @@ def bench(name: str,
     :param database: Database to use
     :param sc: Whether to use single columns
     :param cc: Whether to use column compression
-    :return: Tuple of results and times
+    :return: Results of the database (original, kronecker),
+                times of the database (original, kronecker),
+                results of numpy (original, kronecker),
+                times of numpy (original, kronecker),
     """
     assert not (cc and sc)
 
@@ -40,7 +46,12 @@ def bench(name: str,
 
     original, kronecker = queries(col_indices, nr_cols, rank_k, max_rank, cc, sc, nr_cols_b)
 
-    sum_results = query_results(original, kronecker, database)
-    sum_times = query_profiling(original, kronecker, database)
+    db_results = query_results(original, kronecker, database)
+    db_times = query_profiling(original, kronecker, database)
 
-    return sum_results, sum_times
+    mat_a = np.loadtxt(f"data/matrices/{full_name}{suffix}_rank_{max_rank}_a.csv", delimiter=",")
+    mat_b = np.loadtxt(f"data/matrices/{full_name}{suffix}_rank_{max_rank}_b.csv", delimiter=",")
+    mat_c = np.loadtxt(f"data/matrices/{full_name}.csv", delimiter=",")
+    np_results, np_times = np_profiling(mat_a, mat_b, mat_c, nr_cols, col_indices, rank_k, max_rank, cc, sc, nr_cols_b)
+
+    return db_results, db_times, np_results, np_times
