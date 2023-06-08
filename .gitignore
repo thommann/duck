@@ -19,5 +19,8 @@ data/svd/*
 data/bcols/*
 !data/bcols/.gitkeep
 
+data/opt-30b/*
+!data/opt-30b/.gitkeep
+
 *.log
 *.pid
