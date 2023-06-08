@@ -1,8 +1,13 @@
-import itertools
+import numpy as np
 
-col_indices = [0, 1, 2]
-rank_k = 2
+mat = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
 
-terms = itertools.product(*[itertools.product([idx], range(rank_k)) for idx in col_indices])
+product = np.prod(mat, axis=1)
+target = np.sum(product)
 
-print(list(terms))
+result = np.einsum('ij->i', mat).prod()
+
+print(product)
+print(target)
+print()
+print(result)

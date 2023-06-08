@@ -79,5 +79,18 @@ plot(speedups_np,
      f'NP {operation_name} Speedup ({factors_param}{col_method_param}rank {k})',
      'Speedup',
      f'speedup_np{suffix}')
+# plot times for db and np, kron and orig, for 16 cols
+plt.figure()
+plt.title(f'Times ({factors_param}{col_method_param}rank {k})')
+plt.xlabel('rows')
+plt.ylabel('time (s)')
+plt.xscale('log')
+plt.yscale('log')
+plt.plot(rows, times_db_orig[:, -1], label=f'DuckDB Original {cols[-1]} cols')
+plt.plot(rows, times_db_kron[:, -1], label=f'DuckDB Kronecker {cols[-1]} cols')
+plt.plot(rows, times_np_orig[:, -1] / 1e9, label=f'NumPy Original {cols[-1]} cols')
+plt.plot(rows, times_np_kron[:, -1] / 1e9, label=f'NumPy Kronecker {cols[-1]} cols')
+plt.legend()
+plt.savefig('data/plots/times' + suffix + '.png')
 
 print("All Done!")
