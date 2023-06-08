@@ -48,7 +48,7 @@ def bench(
     if database is None:
         database = f"data/databases/{full_name}{suffix}_rank_{max_rank}.db"
 
-    original, kronecker = queries(col_indices, nr_cols, rank_k, max_rank, cc, sc, nr_cols_b)
+    original, kronecker = queries(col_indices, nr_cols, rank_k, max_rank, cc=cc, sc=sc, nr_cols_b=nr_cols_b)
 
     db_results = query_results(original, kronecker, database)
     db_times = query_profiling(original, kronecker, database, runs=runs, epochs=epochs)
@@ -56,7 +56,8 @@ def bench(
     mat_a = np.loadtxt(f"data/matrices/{full_name}{suffix}_rank_{max_rank}_a.csv", delimiter=",")
     mat_b = np.loadtxt(f"data/matrices/{full_name}{suffix}_rank_{max_rank}_b.csv", delimiter=",")
     mat_c = np.loadtxt(f"data/matrices/{full_name}.csv", delimiter=",")
-    np_results, np_times = np_profiling(mat_a, mat_b, mat_c, nr_cols, col_indices, rank_k, max_rank, cc, sc, nr_cols_b,
+    np_results, np_times = np_profiling(mat_a, mat_b, mat_c, nr_cols, col_indices, rank_k, max_rank,
+                                        cc=cc, sc=sc, nr_cols_b=nr_cols_b,
                                         runs=runs, epochs=epochs)
 
     return db_results, db_times, np_results, np_times
