@@ -64,8 +64,8 @@ def np_profiling(mat_a: np.ndarray,
                  cc: bool,
                  sc: bool,
                  nr_cols_b: int = None,
-                 runs: int = 10,
-                 epochs: int = 10) -> tuple[tuple[float, float], tuple[float, float]]:
+                 runs: int = 1,
+                 epochs: int = 1) -> tuple[tuple[float, float], tuple[float, float]]:
     """
     """
     assert not (sc and cc)

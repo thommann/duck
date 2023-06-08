@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 
-from autobench.params import rows, cols, name, max_k, k, cc, sc, permutations, nr_factors
+from autobench.params import rows, cols, name, max_k, k, cc, sc, permutations, nr_factors, runs, epochs
 from src.bench import bench
 
 assert not (cc and sc)
@@ -43,7 +43,9 @@ for r, row in enumerate(rows):
                                                                max_rank=max_k,
                                                                database=database,
                                                                sc=sc,
-                                                               cc=cc)
+                                                               cc=cc,
+                                                               runs=runs,
+                                                               epochs=epochs)
             permutation_results_db_orig[permutation] = results_db[0]
             permutation_results_db_kron[permutation] = results_db[1]
             permutation_times_db_orig[permutation] = times_db[0]

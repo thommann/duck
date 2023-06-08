@@ -45,8 +45,8 @@ def query_results(original_query: str, kronecker_query: str, database: str) -> t
 def query_profiling(original_query: str,
                     kronecker_query: str,
                     database: str,
-                    runs: int = 10,
-                    epochs: int = 10) -> tuple[float, float]:
+                    runs: int = 1,
+                    epochs: int = 1) -> tuple[float, float]:
     original_timings = []
     kronecker_timings = []
 

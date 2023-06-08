@@ -10,8 +10,11 @@ k = 1
 cc = False
 sc = False
 
-permutations = 10
+permutations = 100
 nr_factors = 1
+
+epochs = 1
+runs = 1
 
 image = 'data/images/webb.png'
 name = 'webb'
