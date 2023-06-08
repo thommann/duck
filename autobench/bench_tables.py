@@ -41,7 +41,6 @@ for col_decomposition in col_decompositions:
                     permutation_times_np_orig = np.zeros(permutations)
                     permutation_times_np_kron = np.zeros(permutations)
                     for permutation in range(permutations):
-                        print(f"PERMUTATION {permutation + 1}/{permutations}", flush=True, end="\r")
                         col_indices = np.random.choice(range(col), nr_factors)
                         database = f"data/databases/{name}_{row}x{col}{col_suffix}{max_rank_suffix}.db"
                         results_db, times_db, results_np, times_np = bench(name,
@@ -62,8 +61,6 @@ for col_decomposition in col_decompositions:
                         permutation_results_np_kron[permutation] = results_np[1]
                         permutation_times_np_orig[permutation] = times_np[0]
                         permutation_times_np_kron[permutation] = times_np[1]
-
-                    print(f"PERMUTATION {permutations}/{permutations}", flush=True)
 
                     results_db_orig[r, c] = np.mean(permutation_results_db_orig)
                     results_db_kron[r, c] = np.mean(permutation_results_db_kron)
