@@ -2,62 +2,52 @@ import time
 
 import numpy as np
 
-from autobench.params import rows, cols, name, max_k, k, compress_cols, single_column
+from autobench.params import rows, cols, name, max_k, k, cc, sc, runs, nr_factors
 from src.bench import bench
-from src.bench_sc import bench_sc
 
-assert not (compress_cols and single_column)
+assert not (cc and sc)
 assert k <= max_k
 
-results_sum_orig = np.zeros((len(rows), len(cols)))
-results_sum_kron = np.zeros((len(rows), len(cols)))
-times_sum_orig = np.zeros((len(rows), len(cols)))
-times_sum_kron = np.zeros((len(rows), len(cols)))
-results_sumproduct_orig = np.zeros((len(rows), len(cols)))
-results_sumproduct_kron = np.zeros((len(rows), len(cols)))
-times_sumproduct_orig = np.zeros((len(rows), len(cols)))
-times_sumproduct_kron = np.zeros((len(rows), len(cols)))
+results_orig = np.zeros((len(rows), len(cols)))
+results_kron = np.zeros((len(rows), len(cols)))
+times_orig = np.zeros((len(rows), len(cols)))
+times_kron = np.zeros((len(rows), len(cols)))
 
-col_suffix = "_cc" if compress_cols else "_sc" if single_column else ""
+col_suffix = "_cc" if cc else "_sc" if sc else ""
 max_rank_suffix = f"_rank_{max_k}"
 
 for r, row in enumerate(rows):
     for c, col in enumerate(cols):
-        start = time.time()
-        print(f"rows: {row:,}, cols: {col:,}", flush=True)
-        database = f"data/databases/{name}_{row}x{col}{col_suffix}{max_rank_suffix}.db"
-        if single_column:
-            sum_results, sum_times, sumproduct_results, sumproduct_times = bench_sc(name, (row, col), k,
-                                                                                    max_rank=max_k,
-                                                                                    database=database)
-        else:
-            sum_results, sum_times, sumproduct_results, sumproduct_times = bench(name, (row, col), k,
-                                                                                 max_rank=max_k,
-                                                                                 database=database,
-                                                                                 cc=compress_cols)
-        results_sum_orig[r, c] = sum_results[0]
-        results_sum_kron[r, c] = sum_results[1]
-        times_sum_orig[r, c] = sum_times[0]
-        times_sum_kron[r, c] = sum_times[1]
-        results_sumproduct_orig[r, c] = sumproduct_results[0]
-        results_sumproduct_kron[r, c] = sumproduct_results[1]
-        times_sumproduct_orig[r, c] = sumproduct_times[0]
-        times_sumproduct_kron[r, c] = sumproduct_times[1]
-        end = time.time()
+        for run in runs:
+            col_indices = np.random.choice(range(col), nr_factors)
+            start = time.time()
+            print(f"rows: {row:,}, cols: {col:,}", flush=True)
+            database = f"data/databases/{name}_{row}x{col}{col_suffix}{max_rank_suffix}.db"
+            results, times = bench(name,
+                                   (row, col),
+                                   k,
+                                   col_indices,
+                                   max_rank=max_k,
+                                   database=database,
+                                   sc=sc,
+                                   cc=cc)
+            results_orig[r, c] = results[0]
+            results_kron[r, c] = results[1]
+            times_orig[r, c] = times[0]
+            times_kron[r, c] = times[1]
+            end = time.time()
 
-        print(f"Done! ({int(end - start)}s)", flush=True)
-        print()
+            print(f"Done! ({int(end - start)}s)", flush=True)
+            print()
 
-rank_suffix = f"_rank_{k}"
-np.savetxt(f'data/results/results_sum_orig{col_suffix}{rank_suffix}.csv', results_sum_orig, delimiter=',')
-np.savetxt(f'data/results/results_sum_kron{col_suffix}{rank_suffix}.csv', results_sum_kron, delimiter=',')
-np.savetxt(f'data/results/results_sumproduct_orig{col_suffix}{rank_suffix}.csv', results_sumproduct_orig,
-           delimiter=',')
-np.savetxt(f'data/results/results_sumproduct_kron{col_suffix}{rank_suffix}.csv', results_sumproduct_kron,
-           delimiter=',')
-np.savetxt(f'data/results/times_sum_orig{col_suffix}{rank_suffix}.csv', times_sum_orig, delimiter=',')
-np.savetxt(f'data/results/times_sum_kron{col_suffix}{rank_suffix}.csv', times_sum_kron, delimiter=',')
-np.savetxt(f'data/results/times_sumproduct_orig{col_suffix}{rank_suffix}.csv', times_sumproduct_orig, delimiter=',')
-np.savetxt(f'data/results/times_sumproduct_kron{col_suffix}{rank_suffix}.csv', times_sumproduct_kron, delimiter=',')
+results_path = f'data/results/'
+rank_suffix = f"_rank{k}"
+factors_suffix = f"_factors{nr_factors}"
+suffix = f"{factors_suffix}{rank_suffix}{col_suffix}"
+
+np.savetxt(f'{results_path}results_orig{suffix}.csv', results_orig, delimiter=',')
+np.savetxt(f'{results_path}results_kron{suffix}.csv', results_kron, delimiter=',')
+np.savetxt(f'{results_path}times_orig{suffix}.csv', times_orig, delimiter=',')
+np.savetxt(f'{results_path}times_kron{suffix}.csv', times_kron, delimiter=',')
 
 print("All done!")

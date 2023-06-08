@@ -1,7 +1,7 @@
 # execute the original and the kronecker query and compare the execution plans
 import duckdb
 
-from queries import queries
+from src.queries import queries
 
 col_indices = [0]
 nr_cols = 2
@@ -18,13 +18,14 @@ print()
 print(kronecker)
 
 suffix = "_sc" if individual else ""
-plan_original = f"data/plans/original_{nr_rows}x{nr_cols}_rank{rank_k}_cols{len(col_indices)}{suffix}.{output}"
-plan_kronecker = f"data/plans/kronecker_{nr_rows}x{nr_cols}_rank{rank_k}_cols{len(col_indices)}{suffix}.{output}"
+plan_original = f"data/plans/original_{nr_rows}x{nr_cols}_rank{rank_k}_factors{len(col_indices)}{suffix}.{output}"
+plan_kronecker = f"data/plans/kronecker_{nr_rows}x{nr_cols}_rank{rank_k}_factors{len(col_indices)}{suffix}.{output}"
+db = f"data/databases/webb_{nr_rows}x{nr_cols}{suffix}_rank_{max_rank}.db"
+
 config = f"""
 PRAGMA enable_profiling='{'QUERY_TREE' if output == 'txt' else 'JSON'}';
 PRAGMA threads=48;
 """
-db = f"data/databases/webb_{nr_rows}x{nr_cols}{suffix}_rank_{max_rank}.db"
 
 con = duckdb.connect(db)
 con.execute(config)
