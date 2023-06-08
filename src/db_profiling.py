@@ -59,8 +59,6 @@ def query_profiling(original_query: str,
     for epoch in range(epochs):
         for query, timings in queries:
             for run in range(runs):
-                print(f"EPOCH {epoch + 1}/{epochs} - RUN {run + 1}/{runs}", flush=True, end="\r")
-
                 res = con.sql(query).explain('analyze')
                 res_json = json.loads(res)
                 timings.append(res_json["timing"])

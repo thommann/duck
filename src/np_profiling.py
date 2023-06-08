@@ -47,7 +47,7 @@ def np_kron_sumproduct(mat_a: np.ndarray,
             col_idx_a, col_idx_b = kronecker_indices(col_idx, nr_cols_a, nr_cols_b, sc, r, max_rank)
             cols_a.append(mat_a[:, col_idx_a])
             cols_b.append(mat_b[:, col_idx_b])
-        result += np.sum(np.prod(cols_a)) * np.sum(np.prod(cols_b))
+        result += np.sum(np.prod(cols_a, axis=0)) * np.sum(np.prod(cols_b, axis=0))
 
     end = time.time_ns()
     timing = end - start
@@ -92,7 +92,7 @@ def np_profiling(mat_a: np.ndarray,
                 if query == "original":
                     # Original
                     start = time.time_ns()
-                    result = np.sum(np.prod(mat_c[:, col_indices]))
+                    result = np.sum(np.prod(mat_c[:, col_indices], axis=1))
                     end = time.time_ns()
                     timing = end - start
                     timings.append(timing)
