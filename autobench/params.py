@@ -11,7 +11,7 @@ cc = False
 sc = False
 
 permutations = 100
-nr_factors = 3
+nr_factors = 2
 
 epochs = 1
 runs = 1

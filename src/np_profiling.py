@@ -92,7 +92,7 @@ def np_profiling(mat_a: np.ndarray,
                 if query == "original":
                     # Original
                     start = time.time_ns()
-                    result = np.einsum('ji->', mat_c[:, col_indices])
+                    result = np.sum(np.prod(mat_c[:, col_indices], axis=1))
                     end = time.time_ns()
                     timing = end - start
                     timings.append(timing)
