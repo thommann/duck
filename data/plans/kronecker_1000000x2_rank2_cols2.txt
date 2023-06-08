@@ -6,7 +6,8 @@
 SELECT (SELECT SUM(column00 * column01) FROM A) * (SELECT SUM(column0 * column0) FROM B) + (SELECT SUM(column00 * column03) FROM A) * (SELECT SUM(column0 * column1) FROM B) + (SELECT SUM(column02 * column01) FROM A) * (SELECT SUM(column1 * column0) FROM B) + (SELECT SUM(column02 * column03) FROM A) * (SELECT SUM(column1 * column1) FROM B);
 ┌─────────────────────────────────────┐
 │┌───────────────────────────────────┐│
-││        Total Time: 0.0037s        ││
+
+││        Total Time: 0.0107s        ││
 │└───────────────────────────────────┘│
 └─────────────────────────────────────┘
 ┌───────────────────────────┐                                                                                                                                                                                                           
