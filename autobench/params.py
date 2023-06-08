@@ -5,16 +5,18 @@ rows = sorted(rows_base_2 + rows_base_10)
 cols = [2 ** x for x in range(1, 5)]
 
 max_k = 10
-k = 1
+ks = [1, 2, 3]
 
 cc = False
 sc = False
 
-permutations = 100
-nr_factors = 2
+col_decompositions = ['cc', 'sc', 'nc']
 
-epochs = 1
-runs = 1
+permutations = 100
+factors = [1, 2, 3]
+
+epochs = 2
+runs = 2
 
 image = 'data/images/webb.png'
 name = 'webb'
