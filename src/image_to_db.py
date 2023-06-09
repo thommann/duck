@@ -18,14 +18,14 @@ def try_image_to_matrix(input_path: str, matrix_c: str, dimensions: tuple[int, i
 
 
 def image_to_db(input_path: str, dimensions: tuple, name: str, k: int = 1,
-                compress_cols: bool = False, single_column: bool = False) -> None:
+                cc: bool = False, sc: bool = False) -> None:
     # We can't compress columns and decompose every column separately at the same time
-    assert not (compress_cols and single_column)
+    assert not (cc and sc)
 
     # 0. Set up paths
     full_name = f"{name}_{dimensions[0]}x{dimensions[1]}"
     matrix_c = f"data/matrices/{full_name}.csv"
-    col_append = "_sc" if single_column else "_cc" if compress_cols else ""
+    col_append = "_sc" if sc else "_cc" if cc else ""
     rank_append = f"_rank_{k}"
     suffix = col_append + rank_append
     matrix_a = matrix_c.replace(".csv", f"{suffix}_a.csv")
@@ -36,12 +36,12 @@ def image_to_db(input_path: str, dimensions: tuple, name: str, k: int = 1,
     matrix, initialized = try_image_to_matrix(input_path, matrix_c, dimensions)
 
     # 2. Create matrices A and B from matrix C
-    if single_column:
+    if sc:
         # 2.a. Decompose every column separately
         matrix_to_kronecker_columns(matrix_c, matrix_a, matrix_b, k=k, matrix=matrix, initialized=initialized)
     else:
         # 2.b. Decompose the whole matrix
-        matrix_to_kronecker(matrix_c, matrix_a, matrix_b, k=k, compress_cols=compress_cols, matrix=matrix,
+        matrix_to_kronecker(matrix_c, matrix_a, matrix_b, k=k, compress_cols=cc, matrix=matrix,
                             initialized=initialized)
 
     # 3. Create database from matrices A, B and C
@@ -94,4 +94,4 @@ def parse_args() -> dict:
 if __name__ == '__main__':
     args = parse_args()
     image_to_db(args['input'], args['dimensions'], args['name'],
-                k=args['rank'], compress_cols=args['compress_cols'], single_column=args['single_column'])
+                k=args['rank'], cc=args['compress_cols'], sc=args['single_column'])

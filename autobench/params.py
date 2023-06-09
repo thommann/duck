@@ -7,12 +7,9 @@ cols = [2 ** x for x in range(1, 5)]
 max_k = 10
 ks = [1, 2, 3]
 
-cc = False
-sc = False
-
 col_decompositions = ['cc', 'sc', 'nc']
 
-permutations = 100
+permutations = 2
 factors = [1, 2, 3]
 
 epochs = 2

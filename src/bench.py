@@ -11,7 +11,7 @@ def bench(
         rank_k: int,
         col_indices: list[int],
         max_rank: int = 10,
-        database: str | None = None,
+        database: str = None,
         sc: bool = False,
         cc: bool = False,
         runs: int = 1,

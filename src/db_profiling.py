@@ -32,7 +32,7 @@ def print_error_and_speedup(original_query: str, kronecker_query: str, database:
 
 
 def query_results(original_query: str, kronecker_query: str, database: str) -> tuple[float, float]:
-    con = duckdb.connect(database=database)
+    con = duckdb.connect(database=database, read_only=True)
 
     original_result = con.sql(original_query).fetchall()[0][0]
     kronecker_result = con.sql(kronecker_query).fetchall()[0][0]
@@ -53,8 +53,12 @@ def query_profiling(original_query: str,
     queries = [(original_query, original_timings),
                (kronecker_query, kronecker_timings)]
 
-    con = duckdb.connect(database=database)
+    con = duckdb.connect(database=database, read_only=True)
     con.execute(config)
+
+    for query, _ in queries:
+        # warmup
+        con.execute(query)
 
     for epoch in range(epochs):
         for query, timings in queries:
@@ -65,10 +69,7 @@ def query_profiling(original_query: str,
 
     con.close()
 
-    original_timings_truncated = original_timings[1:]
-    kronecker_timings_truncated = kronecker_timings[1:]
-
-    average_original_time = float(np.mean(original_timings_truncated))
-    average_kronecker_time = float(np.mean(kronecker_timings_truncated))
+    average_original_time = float(np.mean(original_timings))
+    average_kronecker_time = float(np.mean(kronecker_timings))
 
     return average_original_time, average_kronecker_time
