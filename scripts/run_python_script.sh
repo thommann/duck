@@ -33,6 +33,11 @@ fi
 filename=$(basename -- "$1")
 name="${filename%.*}"
 
+# Kill process if it is already running
+if [ -f out/"$name".pid ]; then
+    kill "$(cat out/"$name".pid)"
+fi
+
 # Set current working directory to python file's directory
 export PYTHONPATH="$PWD"/
 
