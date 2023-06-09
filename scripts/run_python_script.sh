@@ -1,13 +1,17 @@
 #!/bin/bash
 
-# Flag indicating if nice should be used
+# Flags indicating if nice should be used and if MKL environment should be sourced
 USE_NICE=0
+USE_MKL=0
 
 # Parse command line options
-while getopts "n" opt; do
+while getopts "nm" opt; do
   case ${opt} in
     n)
       USE_NICE=1
+      ;;
+    m)
+      USE_MKL=1
       ;;
     \?)
       echo "Invalid option: -$OPTARG" 1>&2
@@ -19,7 +23,13 @@ done
 # Remove parsed options and args from $@ list
 shift $((OPTIND -1))
 
-source venv/bin/activate
+# Decide which python environment to activate
+if [ "$USE_MKL" -eq 1 ]; then
+    source /home/user/mannhart/intel/oneapi/intelpython/latest/bin/activate
+else
+    source venv/bin/activate
+fi
+
 filename=$(basename -- "$1")
 name="${filename%.*}"
 
