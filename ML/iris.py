@@ -72,8 +72,11 @@ print(f"Accuracy of the model on the test set: {100 * correct / total}%")
 # Save the model
 state_dict = model.state_dict()
 for key, value in state_dict.items():
-    size = [0, 0]
-    size[0] = value.shape[0]
-    size[1] = 1 if len(value.shape) == 1 else value.shape[1]
+    value = np.atleast_2d(value)
+    value = value.T
+    size = value.shape
     print(key, value.shape)
-    np.savetxt(f"{key}_{size[0]}x{size[1]}.csv", value.numpy(), delimiter=",")
+    # add an index column
+    idx_col = np.arange(value.shape[0]).reshape(value.shape[0], 1)
+    value = np.hstack((idx_col, value))
+    np.savetxt(f"{key}_{size[0]}x{size[1]}.csv", value, delimiter=",")

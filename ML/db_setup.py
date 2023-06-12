@@ -1,23 +1,14 @@
 import duckdb
 import torch
 
-state_dict = torch.load("iris-model.pth")
-print(state_dict.keys())
+matrices = ['fc1.weight_4x100', 'fc1.bias_100x1', 'fc2.weight_100x50', 'fc2.bias_50x1', 'fc3.weight_50x3', 'fc3.bias_3x1']
 
-# load matrices into duckdb
-con = duckdb.connect(database='lm.db', read_only=False)
-for k, v in state_dict.items():
-    k = k.replace(".", "_")
-    if k.endswith("weight"):
-        con.execute(f"CREATE TABLE {k} (row_id INTEGER, col_id INTEGER, value DOUBLE)")
-        for i, row in enumerate(v):
-            for j, val in enumerate(row):
-                con.execute(f"INSERT INTO {k} VALUES ({i}, {j}, {val})")
-    elif k.endswith("bias"):
-        con.execute(f"CREATE TABLE {k} (row_id INTEGER, value DOUBLE)")
-        for i, val in enumerate(v):
-            con.execute(f"INSERT INTO {k} VALUES ({i}, {val})")
-    else:
-        raise Exception(f"Unknown key {k}")
+con = duckdb.connect('lm.db', read_only=False)
+for matrix in matrices:
+    table_name = matrix.replace('.', '_')
+    filepath = f"{matrix}.csv"
+    con.execute(f"DROP TABLE IF EXISTS {table_name}")
+    con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM '{filepath}'")
 
 con.close()
+print("Done!")
