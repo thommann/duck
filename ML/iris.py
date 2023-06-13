@@ -75,8 +75,5 @@ for key, value in state_dict.items():
     value = np.atleast_2d(value)
     value = value.T
     size = value.shape
-    print(key, value.shape)
-    # add an index column
-    idx_col = np.arange(value.shape[0]).reshape(value.shape[0], 1)
-    value = np.hstack((idx_col, value))
+    print(key, size)
     np.savetxt(f"{key}_{size[0]}x{size[1]}.csv", value, delimiter=",")

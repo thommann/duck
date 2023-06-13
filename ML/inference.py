@@ -15,23 +15,90 @@ print(y_0)
 con = duckdb.connect('lm.db', read_only=False)
 
 # Load the input
-con.execute(f"DROP TABLE IF EXISTS input")
-con.execute(f"CREATE TABLE input (row_id INTEGER, value DOUBLE)")
+con.execute(f"CREATE OR REPLACE TABLE input (row_id INTEGER, value DOUBLE)")
 for i, val in enumerate(x):
     con.execute(f"INSERT INTO input VALUES ({i}, {val})")
 
-inference_query = "WITH combo AS (SELECT * FROM input i, fc1_weight_4x100 w1 WHERE i.row_id = w1.column000)"
+# Inference query
+
+# FC1
+
+w1 = "WITH combo AS (" \
+     "SELECT * " \
+     "FROM input i, fc1_weight_4x100 w1 " \
+     "WHERE i.row_id = w1.row_id)\n"
 for i in range(100):
-    inference_query += f"SELECT c.row_id, SUM(c.value * c.column{i+1:03}) AS value FROM combo c GROUP BY c.row_id UNION ALL "
+    w1 += \
+        f"SELECT {i+1} AS row_id, SUM(c.value * c.column{i:02}) AS value " \
+        f"FROM combo c " \
+        f"UNION ALL\n "
 
-inference_query = inference_query[:-11]
+w1 = w1.rstrip("UNION ALL\n ")
 
-print(inference_query)
+# FC2
 
-inference_query = f"WITH h1 AS ({inference_query}) SELECT * FROM h1, fc1_bias_100x1 b1 WHERE h1.row_id = b1.column0"
+w2 = "WITH combo AS (" \
+      "SELECT * " \
+      "FROM h1 h, fc2_weight_100x50 w2 " \
+      "WHERE h.row_id = w2.row_id)\n"
+for i in range(50):
+    w2 += \
+        f"SELECT {i+1} AS row_id, SUM(c.value * c.column{i:02}) AS value " \
+        f"FROM combo c " \
+        f"UNION ALL\n "
 
-# create the output table
-con.execute(f"CREATE TABLE h1 AS {inference_query}")
+w2 = w2.rstrip("UNION ALL\n ")
+
+# FC3
+
+w3 = "WITH combo AS (" \
+      "SELECT * " \
+      "FROM h2 h, fc3_weight_50x3 w3 " \
+      "WHERE h.row_id = w3.row_id)\n"
+for i in range(3):
+    w3 += \
+        f"SELECT {i+1} AS row_id, SUM(c.value * c.column{i:01}) AS value " \
+        f"FROM combo c " \
+        f"UNION ALL\n "
+
+w3 = w3.rstrip("UNION ALL\n ")
+
+# Bias
+
+bias = "SELECT a.row_id, a.value + b.column0 AS value " \
+
+# ReLU
+
+relu = "SELECT h.row_id, CASE WHEN h.value < 0 THEN 0 ELSE h.value END AS value "
+
+# Softmax
+
+softmax = "SELECT h.row_id, h.value / SUM(h.value) AS value "
+
+# Output
+# FC1
+a1 = "CREATE OR REPLACE TABLE a1 AS " + w1
+con.execute(a1)
+h1 = "CREATE OR REPLACE TABLE h1 AS " + bias + "FROM a1 a, fc1_bias_100x1 b WHERE a.row_id = b.row_id"
+con.execute(h1)
+z1 = "CREATE OR REPLACE TABLE z1 AS " + relu + "FROM h1 h"
+con.execute(z1)
+
+# FC2
+a2 = "CREATE OR REPLACE TABLE a2 AS " + w2
+con.execute(a2)
+h2 = "CREATE OR REPLACE TABLE h2 AS " + bias + "FROM a2 a, fc2_bias_50x1 b WHERE a.row_id = b.row_id"
+con.execute(h2)
+z2 = "CREATE OR REPLACE TABLE z2 AS " + relu + "FROM h2 h"
+con.execute(z2)
+
+# FC3
+a3 = "CREATE OR REPLACE TABLE a3 AS " + w3
+con.execute(a3)
+h3 = "CREATE OR REPLACE TABLE h3 AS " + bias + "FROM a3 a, fc3_bias_3x1 b WHERE a.row_id = b.row_id"
+con.execute(h3)
+output = "CREATE OR REPLACE TABLE output AS " + softmax + "FROM h3 h GROUP BY h.row_id, h.value"
+con.execute(output)
 
 con.close()
 print("Done!")
