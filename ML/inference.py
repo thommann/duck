@@ -23,7 +23,7 @@ con = duckdb.connect('lm.db', read_only=False)
 # Load the input
 con.execute(f"CREATE OR REPLACE TABLE input (row_id INTEGER, value DOUBLE)")
 for i, val in enumerate(x):
-    con.execute(f"INSERT INTO input VALUES ({i}, {val})")
+    con.execute(f"INSERT INTO input VALUES ({i+1}, {val})")
 
 # Inference query
 
