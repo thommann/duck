@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 
 import numpy as np
 
@@ -72,7 +73,10 @@ for col_decomposition in col_decompositions:
                     times_np_kron[r, c] = np.mean(permutation_times_np_kron)
 
                     end = time.time()
-                    print(f"({int(end - start)}s)", flush=True)
+                    end_datetime = datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M:%S')
+                    elapsed_time = int(end - start)
+
+                    print(f"{end_datetime} ({elapsed_time}s)", flush=True)
                     print(flush=True)
 
             results_path = f'data/results/'
