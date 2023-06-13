@@ -1,10 +1,16 @@
 # Load the dataset
 import duckdb
 from sklearn import datasets
+from sklearn.preprocessing import StandardScaler
 
+# Load the dataset
 iris = datasets.load_iris()
 X = iris.data
 y = iris.target
+
+# Scale the features for better training
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
 
 # first input and target
 x = X[0]
@@ -29,7 +35,7 @@ w1 = "WITH combo AS (" \
      "WHERE i.row_id = w1.row_id)\n"
 for i in range(100):
     w1 += \
-        f"SELECT {i+1} AS row_id, SUM(c.value * c.column{i:02}) AS value " \
+        f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:02}) AS value " \
         f"FROM combo c " \
         f"UNION ALL\n "
 
@@ -38,12 +44,12 @@ w1 = w1.rstrip("UNION ALL\n ")
 # FC2
 
 w2 = "WITH combo AS (" \
-      "SELECT * " \
-      "FROM h1 h, fc2_weight_100x50 w2 " \
-      "WHERE h.row_id = w2.row_id)\n"
+     "SELECT * " \
+     "FROM h1 h, fc2_weight_100x50 w2 " \
+     "WHERE h.row_id = w2.row_id)\n"
 for i in range(50):
     w2 += \
-        f"SELECT {i+1} AS row_id, SUM(c.value * c.column{i:02}) AS value " \
+        f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:02}) AS value " \
         f"FROM combo c " \
         f"UNION ALL\n "
 
@@ -52,12 +58,12 @@ w2 = w2.rstrip("UNION ALL\n ")
 # FC3
 
 w3 = "WITH combo AS (" \
-      "SELECT * " \
-      "FROM h2 h, fc3_weight_50x3 w3 " \
-      "WHERE h.row_id = w3.row_id)\n"
+     "SELECT * " \
+     "FROM h2 h, fc3_weight_50x3 w3 " \
+     "WHERE h.row_id = w3.row_id)\n"
 for i in range(3):
     w3 += \
-        f"SELECT {i+1} AS row_id, SUM(c.value * c.column{i:01}) AS value " \
+        f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:01}) AS value " \
         f"FROM combo c " \
         f"UNION ALL\n "
 
@@ -65,7 +71,7 @@ w3 = w3.rstrip("UNION ALL\n ")
 
 # Bias
 
-bias = "SELECT a.row_id, a.value + b.column0 AS value " \
+bias = "SELECT a.row_id, a.value + b.column0 AS value "
 
 # ReLU
 
@@ -73,7 +79,14 @@ relu = "SELECT h.row_id, CASE WHEN h.value < 0 THEN 0 ELSE h.value END AS value 
 
 # Softmax
 
-softmax = "SELECT h.row_id, h.value / SUM(h.value) AS value "
+softmax = "WITH Exponents AS (" \
+          "SELECT h.row_id, EXP(h.value) AS value " \
+          "FROM h3 h), " \
+          "Denominator AS (" \
+          "SELECT SUM(value) AS value " \
+          "FROM Exponents) " \
+          "SELECT e.row_id, e.value / d.value AS value " \
+          "FROM Exponents e, Denominator d"
 
 # Output
 # FC1
@@ -97,7 +110,7 @@ a3 = "CREATE OR REPLACE TABLE a3 AS " + w3
 con.execute(a3)
 h3 = "CREATE OR REPLACE TABLE h3 AS " + bias + "FROM a3 a, fc3_bias_3x1 b WHERE a.row_id = b.row_id"
 con.execute(h3)
-output = "CREATE OR REPLACE TABLE output AS " + softmax + "FROM h3 h GROUP BY h.row_id, h.value"
+output = "CREATE OR REPLACE TABLE output AS " + softmax
 con.execute(output)
 
 con.close()

@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from torch import nn
 from torch import optim
+from ML.model import Net
 
 # Load the dataset
 iris = datasets.load_iris()
@@ -23,23 +24,10 @@ X_train = torch.tensor(X_train, dtype=torch.float)
 y_train = torch.tensor(y_train, dtype=torch.long)
 X_test = torch.tensor(X_test, dtype=torch.float)
 y_test = torch.tensor(y_test, dtype=torch.long)
-
+X = torch.tensor(X, dtype=torch.float)
+y = torch.tensor(y, dtype=torch.long)
 
 # Define the model
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.fc1 = nn.Linear(4, 100)
-        self.fc2 = nn.Linear(100, 50)
-        self.fc3 = nn.Linear(50, 3)
-
-    def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-
-
 model = Net()
 
 # Define loss function and optimizer
@@ -69,8 +57,21 @@ with torch.no_grad():
 
 print(f"Accuracy of the model on the test set: {100 * correct / total}%")
 
+# Test the model on the whole dataset
+model.eval()
+with torch.no_grad():
+    correct = 0
+    total = 0
+    outputs = model(X)
+    _, predicted = torch.max(outputs.data, 1)
+    total += y.size(0)
+    correct += (predicted == y).sum().item()
+
+print(f"Accuracy of the model on the whole dataset: {100 * correct / total}%")
+
 # Save the model
 state_dict = model.state_dict()
+torch.save(state_dict, 'iris-model.pth')
 for key, value in state_dict.items():
     value = np.atleast_2d(value)
     value = value.T
