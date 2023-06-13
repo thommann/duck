@@ -14,9 +14,7 @@ X = scaler.fit_transform(X)
 
 # first input and target
 x = X[0]
-print(x)
 y_0 = y[0]
-print(y_0)
 
 con = duckdb.connect('lm.db', read_only=False)
 
@@ -37,9 +35,9 @@ for i in range(100):
     w1 += \
         f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:02}) AS value " \
         f"FROM combo c " \
-        f"UNION ALL\n "
+        f"UNION ALL\n"
 
-w1 = w1.rstrip("UNION ALL\n ")
+w1 = w1.rstrip("UNION ALL\n")
 
 # FC2
 
@@ -51,9 +49,9 @@ for i in range(50):
     w2 += \
         f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:02}) AS value " \
         f"FROM combo c " \
-        f"UNION ALL\n "
+        f"UNION ALL\n"
 
-w2 = w2.rstrip("UNION ALL\n ")
+w2 = w2.rstrip("UNION ALL\n")
 
 # FC3
 
@@ -65,9 +63,9 @@ for i in range(3):
     w3 += \
         f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:01}) AS value " \
         f"FROM combo c " \
-        f"UNION ALL\n "
+        f"UNION ALL\n"
 
-w3 = w3.rstrip("UNION ALL\n ")
+w3 = w3.rstrip("UNION ALL\n")
 
 # Bias
 
@@ -91,6 +89,7 @@ softmax = "WITH Exponents AS (" \
 # Output
 # FC1
 a1 = "CREATE OR REPLACE TABLE a1 AS " + w1
+print(a1)
 con.execute(a1)
 h1 = "CREATE OR REPLACE TABLE h1 AS " + bias + "FROM a1 a, fc1_bias_100x1 b WHERE a.row_id = b.row_id"
 con.execute(h1)
