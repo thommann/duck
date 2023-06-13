@@ -8,7 +8,8 @@ for matrix in matrices:
     table_name = matrix.replace('.', '_')
     filepath = f"{matrix}.csv"
     con.execute(f"DROP TABLE IF EXISTS {table_name}")
-    con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM '{filepath}'")
+    con.execute(f"CREATE TABLE {table_name} AS SELECT ROW_NUMBER() OVER () AS row_id, * FROM '{filepath}'")
+
 
 con.close()
 print("Done!")
