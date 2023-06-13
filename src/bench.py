@@ -16,6 +16,9 @@ def bench(
         cc: bool = False,
         runs: int = 1,
         epochs: int = 1,
+        mat_a: np.ndarray = None,
+        mat_b: np.ndarray = None,
+        mat_c: np.ndarray = None,
 ) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]:
     """
     Bench a single matrix.
@@ -29,6 +32,9 @@ def bench(
     :param database: Database to use
     :param sc: Whether to use single columns
     :param cc: Whether to use column compression
+    :param mat_a: Matrix A to use for numpy benchmarking
+    :param mat_b: Matrix B to use for numpy benchmarking
+    :param mat_c: Matrix C to use for numpy benchmarking
     :return: Results of the database (original, kronecker),
                 times of the database (original, kronecker),
                 results of numpy (original, kronecker),
@@ -53,9 +59,10 @@ def bench(
     db_results = query_results(original, kronecker, database)
     db_times = query_profiling(original, kronecker, database, runs=runs, epochs=epochs)
 
-    mat_a = np.loadtxt(f"data/matrices/{full_name}{suffix}_rank_{max_rank}_a.csv", delimiter=",")
-    mat_b = np.loadtxt(f"data/matrices/{full_name}{suffix}_rank_{max_rank}_b.csv", delimiter=",")
-    mat_c = np.loadtxt(f"data/matrices/{full_name}.csv", delimiter=",")
+    if mat_a is None or mat_b is None or mat_c is None:
+        mat_a = np.loadtxt(f"data/matrices/{full_name}{suffix}_rank_{max_rank}_a.csv", delimiter=",")
+        mat_b = np.loadtxt(f"data/matrices/{full_name}{suffix}_rank_{max_rank}_b.csv", delimiter=",")
+        mat_c = np.loadtxt(f"data/matrices/{full_name}.csv", delimiter=",")
     np_results, np_times = np_profiling(mat_a, mat_b, mat_c, nr_cols, col_indices, rank_k, max_rank,
                                         cc=cc, sc=sc, nr_cols_b=nr_cols_b,
                                         runs=runs, epochs=epochs)

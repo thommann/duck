@@ -4,8 +4,10 @@ from datetime import datetime
 import numpy as np
 
 from autobench.params import rows, cols, name, max_k, ks, permutations, factors, runs, epochs, \
-    col_decompositions
+    col_decompositions, seed
 from src.bench import bench
+
+np.random.seed(seed)
 
 results_db_orig = np.zeros((len(rows), len(cols)))
 results_db_kron = np.zeros((len(rows), len(cols)))
@@ -41,6 +43,11 @@ for col_decomposition in col_decompositions:
                     permutation_results_np_kron = np.zeros(permutations)
                     permutation_times_np_orig = np.zeros(permutations)
                     permutation_times_np_kron = np.zeros(permutations)
+
+                    mat_a = np.loadtxt(f"data/matrices/{name}{col_suffix}_rank_{max_k}_a.csv", delimiter=",")
+                    mat_b = np.loadtxt(f"data/matrices/{name}{col_suffix}_rank_{max_k}_b.csv", delimiter=",")
+                    mat_c = np.loadtxt(f"data/matrices/{name}.csv", delimiter=",")
+
                     for permutation in range(permutations):
                         col_indices = np.random.choice(range(col), nr_factors)
                         database = f"data/databases/{name}_{row}x{col}{col_suffix}{max_rank_suffix}.db"
@@ -53,7 +60,10 @@ for col_decomposition in col_decompositions:
                                                                            sc=sc,
                                                                            cc=cc,
                                                                            runs=runs,
-                                                                           epochs=epochs)
+                                                                           epochs=epochs,
+                                                                           mat_a=mat_a,
+                                                                           mat_b=mat_b,
+                                                                           mat_c=mat_c)
                         permutation_results_db_orig[permutation] = results_db[0]
                         permutation_results_db_kron[permutation] = results_db[1]
                         permutation_times_db_orig[permutation] = times_db[0]
