@@ -31,8 +31,8 @@ for i, val in enumerate(x):
 
 w1 = "WITH combo AS (" \
      "SELECT * " \
-     "FROM input i, fc1_weight_4x100 w1 " \
-     "WHERE i.row_id = w1.row_id)\n"
+     "FROM input i, fc1_weight_4x100 w " \
+     "WHERE i.row_id = w.row_id)\n"
 for i in range(100):
     w1 += \
         f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:02}) AS value " \
@@ -45,8 +45,8 @@ w1 = w1.rstrip("UNION ALL\n ")
 
 w2 = "WITH combo AS (" \
      "SELECT * " \
-     "FROM h1 h, fc2_weight_100x50 w2 " \
-     "WHERE h.row_id = w2.row_id)\n"
+     "FROM z1 z, fc2_weight_100x50 w " \
+     "WHERE z.row_id = w.row_id)\n"
 for i in range(50):
     w2 += \
         f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:02}) AS value " \
@@ -59,8 +59,8 @@ w2 = w2.rstrip("UNION ALL\n ")
 
 w3 = "WITH combo AS (" \
      "SELECT * " \
-     "FROM h2 h, fc3_weight_50x3 w3 " \
-     "WHERE h.row_id = w3.row_id)\n"
+     "FROM z2 z, fc3_weight_50x3 w " \
+     "WHERE z.row_id = w.row_id)\n"
 for i in range(3):
     w3 += \
         f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:01}) AS value " \
