@@ -25,6 +25,7 @@ shift $((OPTIND -1))
 
 # Decide which python environment to activate
 if [ "$USE_MKL" -eq 1 ]; then
+    source ../intel/oneapi/setvars.sh
     source ../intel/oneapi/intelpython/latest/bin/activate
 else
     source venv/bin/activate
