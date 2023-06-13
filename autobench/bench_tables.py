@@ -44,9 +44,10 @@ for col_decomposition in col_decompositions:
                     permutation_times_np_orig = np.zeros(permutations)
                     permutation_times_np_kron = np.zeros(permutations)
 
-                    mat_a = np.loadtxt(f"data/matrices/{name}{col_suffix}_rank_{max_k}_a.csv", delimiter=",")
-                    mat_b = np.loadtxt(f"data/matrices/{name}{col_suffix}_rank_{max_k}_b.csv", delimiter=",")
-                    mat_c = np.loadtxt(f"data/matrices/{name}.csv", delimiter=",")
+                    full_name = f"{name}_{row}x{col}"
+                    mat_a = np.loadtxt(f"data/matrices/{full_name}{col_suffix}_rank_{max_k}_a.csv", delimiter=",")
+                    mat_b = np.loadtxt(f"data/matrices/{full_name}{col_suffix}_rank_{max_k}_b.csv", delimiter=",")
+                    mat_c = np.loadtxt(f"data/matrices/{full_name}.csv", delimiter=",")
 
                     for permutation in range(permutations):
                         col_indices = np.random.choice(range(col), nr_factors)
