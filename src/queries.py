@@ -18,53 +18,33 @@ def queries(col_indices: list[int],
             max_rank: int,
             sc: bool = False,
             cc: bool = False,
-            nr_cols_b: int = None):
-    """
-    Generates the original and Kronecker queries for the given column indices, number of columns and rank.
-    :param col_indices: list of column indices
-    :param nr_cols: number of columns in the input matrices
-    :param rank_k: rank of the input matrices
-    :param max_rank: maximum rank of the input matrices
-    :param sc: whether to use single-column Kronecker queries
-    :param cc: whether to use compressed-column Kronecker queries
-    :param nr_cols_b: number of columns in the second kronecker matrix (only used if cc is True)
-    :return: original and Kronecker queries
-    """
+            nr_cols_b: int = None,
+            table_a: str = "A",
+            table_b: str = "B",
+            table_c: str = "C") -> tuple[str, str]:
     assert not (sc and cc)
     assert (cc and nr_cols_b is not None) or (not cc and nr_cols_b is None)
 
     nr_cols_b = nr_cols if sc else nr_cols_b if cc else 1
     nr_cols_a = nr_cols if sc else nr_cols // nr_cols_b
 
-    col_format_a = "03d" if nr_cols_a * max_rank > 100 else "02d" if nr_cols_a * max_rank > 10 else "01d"
-    col_format_b = "03d" if nr_cols_b * max_rank > 100 else "02d" if nr_cols_b * max_rank > 10 else "01d"
-    col_format_c = "03d" if nr_cols > 100 else "02d" if nr_cols > 10 else "01d"
+    col_format_a = f"{len(str(int(nr_cols_a * max_rank - 1))):02d}d"
+    col_format_b = f"{len(str(int(nr_cols_b * max_rank - 1))):02d}d"
+    col_format_c = f"{len(str(int(nr_cols - 1))):02d}d"
 
-    original_query = f"SELECT SUM({' * '.join([f'column{i:{col_format_c}}' for i in col_indices])}) FROM C;"
+    original_query = f"SELECT SUM({' * '.join([f'column{i:{col_format_c}}' for i in col_indices])}) FROM {table_c};"
 
-    if len(col_indices) == 1:
-        # SUM
-        col_idx = col_indices[0]
-        terms = []
-        for r in range(rank_k):
+    combinations = itertools.product(*[itertools.product([idx], range(rank_k)) for idx in col_indices])
+    terms = []
+    for combination in combinations:
+        products_a = []
+        products_b = []
+        for col_idx, r in combination:
             col_idx_a, col_idx_b = kronecker_indices(col_idx, nr_cols_a, nr_cols_b, sc, r, max_rank)
-            terms.append(f"(SELECT SUM(column{col_idx_a:{col_format_a}}) FROM A) * "
-                         f"(SELECT SUM(column{col_idx_b:{col_format_b}}) FROM B)")
-        kronecker_query = f"SELECT {' + '.join(terms)};"
-
-    else:
-        # SUM product
-        combinations = itertools.product(*[itertools.product([idx], range(rank_k)) for idx in col_indices])
-        terms = []
-        for combination in combinations:
-            products_a = []
-            products_b = []
-            for col_idx, r in combination:
-                col_idx_a, col_idx_b = kronecker_indices(col_idx, nr_cols_a, nr_cols_b, sc, r, max_rank)
-                products_a.append(f"column{col_idx_a:{col_format_a}}")
-                products_b.append(f"column{col_idx_b:{col_format_b}}")
-            terms.append(f"(SELECT SUM({' * '.join(products_a)}) FROM A) * "
-                         f"(SELECT SUM({' * '.join(products_b)}) FROM B)")
-        kronecker_query = f"SELECT {' + '.join(terms)};"
+            products_a.append(f"column{col_idx_a:{col_format_a}}")
+            products_b.append(f"column{col_idx_b:{col_format_b}}")
+        terms.append(f"(SELECT SUM({' * '.join(products_a)}) FROM {table_a}) * "
+                     f"(SELECT SUM({' * '.join(products_b)}) FROM {table_b})")
+    kronecker_query = f"SELECT {' + '.join(terms)};"
 
     return original_query, kronecker_query
