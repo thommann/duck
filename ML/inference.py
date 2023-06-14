@@ -1,7 +1,48 @@
-# Load the dataset
 import duckdb
+import numpy as np
 from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
+
+
+def insert(con: duckdb.DuckDBPyConnection, table: str, x: np.ndarray) -> str:
+    con.execute(f"CREATE OR REPLACE TABLE {table} (row_id INTEGER, value DOUBLE)")
+    for i, val in enumerate(x):
+        con.execute(f"INSERT INTO {table} VALUES ({i + 1}, {val})")
+    return table
+
+
+def execute(con: duckdb.DuckDBPyConnection, table: str, query: str) -> str:
+    query = f"CREATE OR REPLACE TABLE {table} AS (\n{query}\n)"
+    print(query)
+    con.execute(query)
+    return table
+
+
+def linear(cols: int, z_relation: str, w_relation: str, b_relation: str) -> str:
+    query = f"""WITH 
+combo AS (
+    SELECT *
+    FROM {z_relation} z, {w_relation} w
+    WHERE z.row_id = w.row_id
+),
+a AS ("""
+    for i in range(cols):
+        query += f"""
+    SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:{len(str(int(cols - 1))):02d}d}) AS value FROM combo c
+    UNION ALL"""
+    query = query.rstrip("UNION ALL\n")
+    query += "\n)\n"
+    query += f"SELECT a.row_id, a.value + b.column0 AS value FROM a, {b_relation} b WHERE a.row_id = b.row_id"
+    return query
+
+
+def relu(h_relation: str) -> str:
+    return f"SELECT row_id, CASE WHEN value < 0 THEN 0 ELSE value END AS value FROM {h_relation}"
+
+
+def softmax(h_relation: str) -> str:
+    return f"SELECT row_id, EXP(value) / SUM(EXP(value)) OVER () AS value FROM {h_relation}"
+
 
 # Load the dataset
 iris = datasets.load_iris()
@@ -19,97 +60,24 @@ y_0 = y[0]
 con = duckdb.connect('lm.db', read_only=False)
 
 # Load the input
-con.execute(f"CREATE OR REPLACE TABLE input (row_id INTEGER, value DOUBLE)")
-for i, val in enumerate(x):
-    con.execute(f"INSERT INTO input VALUES ({i+1}, {val})")
+input = insert(con, "input", x)
 
 # Inference query
-
 # FC1
-
-w1 = "WITH combo AS (" \
-     "SELECT * " \
-     "FROM input i, fc1_weight_4x100 w " \
-     "WHERE i.row_id = w.row_id)\n"
-for i in range(100):
-    w1 += \
-        f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:02}) AS value " \
-        f"FROM combo c " \
-        f"UNION ALL\n"
-
-w1 = w1.rstrip("UNION ALL\n")
+h1 = execute(con, "h1", linear(100, input, "fc1_weight_4x100", "fc1_bias_100x1"))
+z1 = execute(con, "z1", relu(h1))
 
 # FC2
-
-w2 = "WITH combo AS (" \
-     "SELECT * " \
-     "FROM z1 z, fc2_weight_100x50 w " \
-     "WHERE z.row_id = w.row_id)\n"
-for i in range(50):
-    w2 += \
-        f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:02}) AS value " \
-        f"FROM combo c " \
-        f"UNION ALL\n"
-
-w2 = w2.rstrip("UNION ALL\n")
+h2 = execute(con, "h2", linear(50, z1, "fc2_weight_100x50", "fc2_bias_50x1"))
+z2 = execute(con, "z2", relu(h2))
 
 # FC3
+h3 = execute(con, "h3", linear(3, z2, "fc3_weight_50x3", "fc3_bias_3x1"))
+output = execute(con, "output", softmax(h3))
 
-w3 = "WITH combo AS (" \
-     "SELECT * " \
-     "FROM z2 z, fc3_weight_50x3 w " \
-     "WHERE z.row_id = w.row_id)\n"
-for i in range(3):
-    w3 += \
-        f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:01}) AS value " \
-        f"FROM combo c " \
-        f"UNION ALL\n"
-
-w3 = w3.rstrip("UNION ALL\n")
-
-# Bias
-
-bias = "SELECT a.row_id, a.value + b.column0 AS value "
-
-# ReLU
-
-relu = "SELECT h.row_id, CASE WHEN h.value < 0 THEN 0 ELSE h.value END AS value "
-
-# Softmax
-
-softmax = "WITH Exponents AS (" \
-          "SELECT h.row_id, EXP(h.value) AS value " \
-          "FROM h3 h),\n" \
-          "Denominator AS (" \
-          "SELECT SUM(value) AS value " \
-          "FROM Exponents)\n" \
-          "SELECT e.row_id, e.value / d.value AS value " \
-          "FROM Exponents e, Denominator d"
-
-# Output
-# FC1
-a1 = "CREATE OR REPLACE TABLE a1 AS (" + w1 + ")"
-con.execute(a1)
-h1 = "CREATE OR REPLACE TABLE h1 AS (" + bias + "FROM a1 a, fc1_bias_100x1 b WHERE a.row_id = b.row_id)"
-con.execute(h1)
-z1 = "CREATE OR REPLACE TABLE z1 AS (" + relu + "FROM h1 h)"
-con.execute(z1)
-
-# FC2
-a2 = "CREATE OR REPLACE TABLE a2 AS (" + w2 + ")"
-con.execute(a2)
-h2 = "CREATE OR REPLACE TABLE h2 AS (" + bias + "FROM a2 a, fc2_bias_50x1 b WHERE a.row_id = b.row_id)"
-con.execute(h2)
-z2 = "CREATE OR REPLACE TABLE z2 AS (" + relu + "FROM h2 h)"
-con.execute(z2)
-
-# FC3
-a3 = "CREATE OR REPLACE TABLE a3 AS (" + w3 + ")"
-con.execute(a3)
-h3 = "CREATE OR REPLACE TABLE h3 AS (" + bias + "FROM a3 a, fc3_bias_3x1 b WHERE a.row_id = b.row_id)"
-con.execute(h3)
-output = "CREATE OR REPLACE TABLE output AS (" + softmax + ")"
-con.execute(output)
+# Get the output
+output = con.execute(f"SELECT * FROM {output}").fetchall()
+print("Output:", output)
 
 con.close()
 print("Done!")
