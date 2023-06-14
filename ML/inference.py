@@ -24,12 +24,12 @@ combo AS (
     FROM {z_relation} z, {w_relation} w
     WHERE z.row_id = w.row_id
 ),
-a AS ("""
+a AS (
+"""
+    terms = []
     for i in range(cols):
-        query += f"""
-    SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:{len(str(int(cols - 1))):02d}d}) AS value FROM combo c
-    UNION ALL"""
-    query = query.rstrip("UNION ALL\n")
+        terms.append(f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:{len(str(int(cols - 1))):02d}d}) AS value FROM combo c")
+    query += "\nUNION ALL\n".join(terms)
     query += "\n)\n"
     query += f"SELECT a.row_id, a.value + b.column0 AS value FROM a, {b_relation} b WHERE a.row_id = b.row_id"
     return query
