@@ -13,7 +13,6 @@ def insert(con: duckdb.DuckDBPyConnection, table: str, x: np.ndarray) -> str:
 
 def execute(con: duckdb.DuckDBPyConnection, table: str, query: str) -> str:
     query = f"CREATE OR REPLACE TABLE {table} AS (\n{query}\n)"
-    print(query)
     con.execute(query)
     return table
 
