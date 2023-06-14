@@ -12,8 +12,12 @@ def kronecker_indices(col_idx: int, nr_cols_a: int, nr_cols_b: int, sc: bool, r:
     return col_idx_a, col_idx_b
 
 
-def kronecker_sum_product(col_indices: list[int], nr_cols_a: int, nr_cols_b: int, sc: bool, max_rank: int, rank_k: int,
-                          table_a: str = "A", table_b: str = "B") -> str:
+def kronecker_sum_product(col_indices: list[int | str], nr_cols_a: int, nr_cols_b: int,
+                          sc: bool = False,
+                          max_rank: int = 1,
+                          rank_k: int = 1,
+                          table_a: str = "A",
+                          table_b: str = "B") -> str:
     col_format_a = f"{len(str(int(nr_cols_a * max_rank - 1))):02d}d"
     col_format_b = f"{len(str(int(nr_cols_b * max_rank - 1))):02d}d"
 
@@ -23,9 +27,14 @@ def kronecker_sum_product(col_indices: list[int], nr_cols_a: int, nr_cols_b: int
         products_a = []
         products_b = []
         for col_idx, r in combination:
-            col_idx_a, col_idx_b = kronecker_indices(col_idx, nr_cols_a, nr_cols_b, sc, r, max_rank)
-            products_a.append(f"column{col_idx_a:{col_format_a}}")
-            products_b.append(f"column{col_idx_b:{col_format_b}}")
+            if isinstance(col_idx, str):
+                col_a = col_b = col_idx
+            else:
+                col_idx_a, col_idx_b = kronecker_indices(col_idx, nr_cols_a, nr_cols_b, sc, r, max_rank)
+                col_a = f"column{col_idx_a:{col_format_a}}"
+                col_b = f"column{col_idx_b:{col_format_b}}"
+            products_a.append(col_a)
+            products_b.append(col_b)
         terms.append(f"(SELECT SUM({' * '.join(products_a)}) FROM {table_a}) * "
                      f"(SELECT SUM({' * '.join(products_b)}) FROM {table_b})")
 
