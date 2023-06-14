@@ -11,13 +11,6 @@ PRAGMA threads=48;
 
 
 def print_error_and_speedup(original_query: str, kronecker_query: str, database: str) -> tuple[float, float]:
-    """
-    Calculates the relative error and the speedup of the kronecker query compared to the original query.
-    :param original_query:
-    :param kronecker_query:
-    :param database:
-    :return: returns the relative error and the speedup
-    """
     original_result, kronecker_result = query_results(original_query, kronecker_query, database)
     abs_error = abs(original_result - kronecker_result)
     rel_error = abs_error / original_result
@@ -31,13 +24,18 @@ def print_error_and_speedup(original_query: str, kronecker_query: str, database:
     return rel_error, speedup
 
 
-def query_results(original_query: str, kronecker_query: str, database: str) -> tuple[float, float]:
-    con = duckdb.connect(database=database, read_only=True)
+def query_results(original_query: str, kronecker_query: str, database: str,
+                  provided_con: duckdb.DuckDBPyConnection = None) -> tuple[float, float]:
+    if provided_con is None:
+        con = duckdb.connect(database=database, read_only=True)
+    else:
+        con = provided_con
 
     original_result = con.sql(original_query).fetchall()[0][0]
     kronecker_result = con.sql(kronecker_query).fetchall()[0][0]
 
-    con.close()
+    if provided_con is None:
+        con.close()
 
     return original_result, kronecker_result
 
@@ -45,6 +43,7 @@ def query_results(original_query: str, kronecker_query: str, database: str) -> t
 def query_profiling(original_query: str,
                     kronecker_query: str,
                     database: str,
+                    provided_con: duckdb.DuckDBPyConnection = None,
                     runs: int = 1,
                     epochs: int = 1) -> tuple[float, float]:
     original_timings = []
@@ -53,8 +52,11 @@ def query_profiling(original_query: str,
     queries = [(original_query, original_timings),
                (kronecker_query, kronecker_timings)]
 
-    con = duckdb.connect(database=database, read_only=True)
-    con.execute(config)
+    if provided_con is None:
+        con = duckdb.connect(database=database, read_only=True)
+        con.execute(config)
+    else:
+        con = provided_con
 
     for query, _ in queries:
         # warmup
@@ -67,7 +69,8 @@ def query_profiling(original_query: str,
                 res_json = json.loads(res)
                 timings.append(res_json["timing"])
 
-    con.close()
+    if provided_con is None:
+        con.close()
 
     average_original_time = float(np.mean(original_timings))
     average_kronecker_time = float(np.mean(kronecker_timings))

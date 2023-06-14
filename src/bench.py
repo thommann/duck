@@ -1,3 +1,4 @@
+import duckdb
 import numpy as np
 
 from src.db_profiling import query_results, query_profiling
@@ -19,9 +20,11 @@ def bench(
         mat_a: np.ndarray = None,
         mat_b: np.ndarray = None,
         mat_c: np.ndarray = None,
+        provided_con: duckdb.DuckDBPyConnection = None
 ) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]:
     """
     Bench a single matrix.
+    :param provided_con: Connection to use for the database
     :param epochs: how many times to run the benchmark with both methods
     :param runs: how many times to run the benchmark per method per epoch
     :param name: Name of the matrix to benchmark
@@ -56,8 +59,8 @@ def bench(
 
     original, kronecker = queries(col_indices, nr_cols, rank_k, max_rank, cc=cc, sc=sc, nr_cols_b=nr_cols_b)
 
-    db_results = query_results(original, kronecker, database)
-    db_times = query_profiling(original, kronecker, database, runs=runs, epochs=epochs)
+    db_results = query_results(original, kronecker, database, provided_con=provided_con)
+    db_times = query_profiling(original, kronecker, database, provided_con=provided_con, runs=runs, epochs=epochs)
 
     if mat_a is None or mat_b is None or mat_c is None:
         mat_a = np.loadtxt(f"data/matrices/{full_name}{suffix}_rank_{max_rank}_a.csv", delimiter=",")

@@ -1,6 +1,7 @@
 import time
 from datetime import datetime
 
+import duckdb
 import numpy as np
 
 from autobench.params import rows, cols, name, max_k, ks, permutations, factors, runs, epochs, \
@@ -19,6 +20,12 @@ times_np_orig = np.zeros((len(rows), len(cols)))
 times_np_kron = np.zeros((len(rows), len(cols)))
 
 max_rank_suffix = f"_rank_{max_k}"
+
+config = """
+PRAGMA enable_profiling='json';
+PRAGMA profile_output='out/.temp';
+PRAGMA threads=48;
+"""
 
 for col_decomposition in col_decompositions:
     cc = col_decomposition == "cc"
@@ -49,9 +56,12 @@ for col_decomposition in col_decompositions:
                     mat_b = np.loadtxt(f"data/matrices/{full_name}{col_suffix}_rank_{max_k}_b.csv", delimiter=",")
                     mat_c = np.loadtxt(f"data/matrices/{full_name}.csv", delimiter=",")
 
+                    database = f"data/databases/{name}_{row}x{col}{col_suffix}{max_rank_suffix}.db"
+                    con = duckdb.connect(database=database, read_only=True)
+                    con.execute(config)
+
                     for permutation in range(permutations):
                         col_indices = np.random.choice(range(col), nr_factors)
-                        database = f"data/databases/{name}_{row}x{col}{col_suffix}{max_rank_suffix}.db"
                         results_db, times_db, results_np, times_np = bench(name,
                                                                            (row, col),
                                                                            k,
@@ -64,7 +74,8 @@ for col_decomposition in col_decompositions:
                                                                            epochs=epochs,
                                                                            mat_a=mat_a,
                                                                            mat_b=mat_b,
-                                                                           mat_c=mat_c)
+                                                                           mat_c=mat_c,
+                                                                           provided_con=con)
                         permutation_results_db_orig[permutation] = results_db[0]
                         permutation_results_db_kron[permutation] = results_db[1]
                         permutation_times_db_orig[permutation] = times_db[0]
@@ -73,6 +84,8 @@ for col_decomposition in col_decompositions:
                         permutation_results_np_kron[permutation] = results_np[1]
                         permutation_times_np_orig[permutation] = times_np[0]
                         permutation_times_np_kron[permutation] = times_np[1]
+
+                    con.close()
 
                     results_db_orig[r, c] = np.mean(permutation_results_db_orig)
                     results_db_kron[r, c] = np.mean(permutation_results_db_kron)
