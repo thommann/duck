@@ -13,22 +13,22 @@ def insert(con: duckdb.DuckDBPyConnection, table: str, x: np.ndarray) -> str:
 
 def execute(con: duckdb.DuckDBPyConnection, table: str, query: str) -> str:
     query = f"CREATE OR REPLACE TABLE {table} AS (\n{query}\n)"
+    print(query)
     con.execute(query)
     return table
 
 
 def linear(cols: int, z_relation: str, w_relation: str, b_relation: str) -> str:
-    query = f"""WITH 
+    query = f"""WITH
 combo AS (
-    SELECT *
-    FROM {z_relation} z, {w_relation} w
-    WHERE z.row_id = w.row_id
+SELECT * FROM {z_relation} z, {w_relation} w WHERE z.row_id = w.row_id
 ),
 a AS (
 """
     terms = []
     for i in range(cols):
-        terms.append(f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:{len(str(int(cols - 1))):02d}d}) AS value FROM combo c")
+        terms.append(f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:{len(str(int(cols - 1))):02d}d}) AS value "
+                     f"FROM combo c")
     query += "\nUNION ALL\n".join(terms)
     query += "\n)\n"
     query += f"SELECT a.row_id, a.value + b.column0 AS value FROM a, {b_relation} b WHERE a.row_id = b.row_id"
