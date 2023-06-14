@@ -8,12 +8,12 @@ cols = [2 ** x for x in range(1, 5)]
 # cols = [8]  # TODO: remove
 
 max_k = 10
-ks = [3]
+ks = [3, 2, 1]
 
-col_decompositions = ['cc']  # options: cc, sc, nc
+col_decompositions = ['cc', 'sc', 'nc']  # options: cc, sc, nc
 
-permutations = 10
-factors = [3]
+permutations = 100
+factors = [3, 2, 1]
 
 epochs = 1
 runs = 1
