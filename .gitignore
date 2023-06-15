@@ -27,3 +27,5 @@ data/opt-30b/*
 *.wal
 
 ML/*.csv
+ML/*.pth
+ML/*.db

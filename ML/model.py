@@ -1,13 +1,15 @@
 import torch
 from torch import nn
 
+from ML.params import middle_layer
+
 
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.fc1 = nn.Linear(4, 1000)
-        self.fc2 = nn.Linear(1000, 500)
-        self.fc3 = nn.Linear(500, 3)
+        self.fc1 = nn.Linear(4, middle_layer[0])
+        self.fc2 = nn.Linear(middle_layer[0], middle_layer[1])
+        self.fc3 = nn.Linear(middle_layer[1], 3)
 
     def forward(self, x):
         h1 = self.fc1(x)

@@ -6,6 +6,7 @@ from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
 
 from ML.calculate_kronecker import calculate_kronecker
+from ML.params import middle_layer
 from src.queries import kronecker_sum_product
 
 
@@ -86,15 +87,17 @@ def run():
 
     # Inference query
     # FC1
-    h1 = execute(con, "h1", linear(100, input, "fc1_weight_4x100", "fc1_bias_100x1"))
+    h1 = execute(con, "h1",
+                 linear(middle_layer[0], input, f"fc1_weight_4x{middle_layer[0]}", f"fc1_bias_{middle_layer[0]}x1"))
     z1 = execute(con, "z1", relu(h1))
 
     # FC2
-    h2 = execute(con, "h2", linear(50, z1, "fc2_weight_100x50", "fc2_bias_50x1"))
+    h2 = execute(con, "h2", linear(middle_layer[1], z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}",
+                                   f"fc2_bias_{middle_layer[1]}x1"))
     z2 = execute(con, "z2", relu(h2))
 
     # FC3
-    h3 = execute(con, "h3", linear(3, z2, "fc3_weight_50x3", "fc3_bias_3x1"))
+    h3 = execute(con, "h3", linear(3, z2, f"fc3_weight_{middle_layer[1]}x3", f"fc3_bias_3x1"))
     z3 = execute(con, "output", softmax(h3))
 
     end = time.time()
@@ -116,22 +119,26 @@ def run_krone():
     # Inference query
     # FC1
     h1 = execute(con, "h1_kron",
-                 linear_krone(100, input_a, input_b, "fc1_weight_4x100_a", "fc1_weight_4x100_b", "fc1_bias_100x1"))
+                 linear_krone(middle_layer[0], input_a, input_b, f"fc1_weight_4x{middle_layer[0]}_a",
+                              f"fc1_weight_4x{middle_layer[0]}_b", f"fc1_bias_{middle_layer[0]}x1"))
     z1 = execute(con, "z1_kron", relu(h1))
     z1_values = con.execute(f"SELECT value FROM {z1}").fetchall()
-    z1_values = np.array(z1_values).reshape(100, 1)
+    z1_values = np.array(z1_values).reshape(middle_layer[0], 1)
     z1_a, z1_b = insert_krone(con, "z1_a", "z1_b", z1_values)
 
     # FC2
     h2 = execute(con, "h2_kron",
-                 linear_krone(50, z1_a, z1_b, "fc2_weight_100x50_a", "fc2_weight_100x50_b", "fc2_bias_50x1"))
+                 linear_krone(middle_layer[1], z1_a, z1_b, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_a",
+                              f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_b", f"fc2_bias_{middle_layer[1]}x1"))
     z2 = execute(con, "z2_kron", relu(h2))
     z2_values = con.execute(f"SELECT value FROM {z2}").fetchall()
-    z2_values = np.array(z2_values).reshape(50, 1)
+    z2_values = np.array(z2_values).reshape(middle_layer[1], 1)
     z2_a, z2_b = insert_krone(con, "z2_a", "z2_b", z2_values)
 
     # FC3
-    h3 = execute(con, "h3_kron", linear_krone(3, z2_a, z2_b, "fc3_weight_50x3_a", "fc3_weight_50x3_b", "fc3_bias_3x1"))
+    h3 = execute(con, "h3_kron",
+                 linear_krone(3, z2_a, z2_b, f"fc3_weight_{middle_layer[1]}x3_a", f"fc3_weight_{middle_layer[1]}x3_b",
+                              f"fc3_bias_3x1"))
     z3 = execute(con, "output_kron", softmax(h3))
 
     end = time.time()
@@ -145,25 +152,27 @@ def run_krone():
     return elapsed, output
 
 
-# Load the dataset
-iris = datasets.load_iris()
-X = iris.data
-y = iris.target
+if __name__ == "__main__":
+    # Load the dataset
+    iris = datasets.load_iris()
+    X = iris.data
+    y = iris.target
 
-# Scale the features for better training
-scaler = StandardScaler()
-X = scaler.fit_transform(X)
+    # Scale the features for better training
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X)
 
-# first input and target
-x = X[0]
-y_0 = y[0]
+    # first input and target
+    x = X[0]
+    y_0 = y[0]
 
-con = duckdb.connect('lm.db', read_only=False)
+    con = duckdb.connect(f'ml{middle_layer[0]}x{middle_layer[1]}.db', read_only=False)
+    con.execute("PRAGMA threads=24; PRAGMA max_expression_depth=100000;")
 
-print("Default:")
-run()
-print("Kronecker:")
-run_krone()
+    print("Default:")
+    run()
+    print("Kronecker:")
+    run_krone()
 
-con.close()
-print("Done!")
+    con.close()
+    print("Done!")

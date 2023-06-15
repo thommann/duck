@@ -1,5 +1,6 @@
 import numpy as np
 
+from ML.params import middle_layer
 from src.kronecker import svd, compute_shapes, kronecker_decomposition
 
 
@@ -13,8 +14,9 @@ def calculate_kronecker(matrix, k=1) -> tuple[np.ndarray, np.ndarray]:
 
 
 if __name__ == '__main__':
-    matrices = ['fc1.weight_4x1000', 'fc1.bias_1000x1', 'fc2.weight_1000x500', 'fc2.bias_500x1', 'fc3.weight_500x3',
-                'fc3.bias_3x1']
+    matrices = [f'fc1.weight_4x{middle_layer[0]}', f'fc1.bias_{middle_layer[0]}x1',
+                f'fc2.weight_{middle_layer[0]}x{middle_layer[1]}',
+                f'fc2.bias_{middle_layer[1]}x1', f'fc3.weight_{middle_layer[1]}x3', f'fc3.bias_3x1']
 
     for matrix in matrices:
         filepath = f"{matrix}.csv"
