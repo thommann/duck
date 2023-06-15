@@ -19,7 +19,7 @@ y = torch.tensor(y, dtype=torch.long)
 
 # Load iris model
 model = Net()
-model.load_state_dict(torch.load('iris-model.pth'))
+model.load_state_dict(torch.load('data/iris-model.pth'))
 
 # # Test the model on the whole dataset
 # model.eval()

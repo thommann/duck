@@ -19,10 +19,10 @@ if __name__ == '__main__':
                 f'fc2.bias_{middle_layer[1]}x1', f'fc3.weight_{middle_layer[1]}x3', f'fc3.bias_3x1']
 
     for matrix in matrices:
-        filepath = f"{matrix}.csv"
+        filepath = f"data/{matrix}.csv"
         c = np.loadtxt(filepath, delimiter=',')
         a, b = calculate_kronecker(c, k=1)
-        np.savetxt(f"{matrix}_a.csv", a, delimiter=',')
-        np.savetxt(f"{matrix}_b.csv", b, delimiter=',')
+        np.savetxt(f"data/{matrix}_a.csv", a, delimiter=',')
+        np.savetxt(f"data/{matrix}_b.csv", b, delimiter=',')
 
     print("Done!")

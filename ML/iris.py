@@ -5,16 +5,17 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from torch import nn
 from torch import optim
+
 from ML.model import Net
 
 
-def test(model: Net, X: torch.Tensor, y: torch.Tensor) -> None:
+def test(model: Net, x: torch.Tensor, y: torch.Tensor) -> None:
     # Test the model
     model.eval()
     with torch.no_grad():
         correct = 0
         total = 0
-        outputs = model(X)
+        outputs = model(x)
         _, predicted = torch.max(outputs.data, 1)
         total += y.size(0)
         correct += (predicted == y).sum().item()
@@ -70,10 +71,10 @@ test(model, X, y)
 
 # Save the model
 state_dict = model.state_dict()
-torch.save(state_dict, 'iris-model.pth')
+torch.save(state_dict, 'data/iris-model.pth')
 for key, value in state_dict.items():
     value = np.atleast_2d(value)
     value = value.T
     size = value.shape
     print(key, size)
-    np.savetxt(f"{key}_{size[0]}x{size[1]}.csv", value, delimiter=",")
+    np.savetxt(f"data/{key}_{size[0]}x{size[1]}.csv", value, delimiter=",")

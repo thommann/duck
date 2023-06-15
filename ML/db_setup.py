@@ -15,13 +15,14 @@ kron_matrices = [f'fc1.weight_4x{middle_layer[0]}_a', f'fc1.weight_4x{middle_lay
 
 matrices += kron_matrices
 
-con = duckdb.connect(f'ml{middle_layer[0]}x{middle_layer[1]}.db', read_only=False)
+con = duckdb.connect(f'data/ml{middle_layer[0]}x{middle_layer[1]}.db', read_only=False)
 for matrix in matrices:
-    print(f"Processing {matrix}...", end='\r')
+    print(f"Processing {matrix}...", end='\r', flush=True)
     table_name = matrix.replace('.', '_')
-    filepath = f"{matrix}.csv"
-    con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT ROW_NUMBER() OVER () AS row_id, * FROM '{filepath}'")
-    print(f"Processing {matrix}... Done!")
+    filepath = f"data/{matrix}.csv"
+    con.execute(f"DROP TABLE IF EXISTS {table_name}")
+    con.execute(f"CREATE TABLE {table_name} AS SELECT ROW_NUMBER() OVER () AS row_id, * FROM '{filepath}'")
+    print(f"Processing {matrix}... Done!", flush=True)
 
 con.close()
 print("All done!")

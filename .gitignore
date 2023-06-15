@@ -26,6 +26,5 @@ data/opt-30b/*
 *.pid
 *.wal
 
-ML/*.csv
-ML/*.pth
-ML/*.db
+ML/data/*
+!ML/data/.gitkeep
