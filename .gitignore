@@ -25,3 +25,5 @@ data/opt-30b/*
 *.log
 *.pid
 *.wal
+
+ML/*.csv

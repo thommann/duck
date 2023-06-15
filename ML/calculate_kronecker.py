@@ -13,7 +13,7 @@ def calculate_kronecker(matrix, k=1) -> tuple[np.ndarray, np.ndarray]:
 
 
 if __name__ == '__main__':
-    matrices = ['fc1.weight_4x100', 'fc1.bias_100x1', 'fc2.weight_100x50', 'fc2.bias_50x1', 'fc3.weight_50x3',
+    matrices = ['fc1.weight_4x1000', 'fc1.bias_1000x1', 'fc2.weight_1000x500', 'fc2.bias_500x1', 'fc3.weight_500x3',
                 'fc3.bias_3x1']
 
     for matrix in matrices:

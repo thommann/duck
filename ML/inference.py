@@ -107,6 +107,7 @@ def run():
 
     return elapsed, output
 
+
 def run_krone():
     start = time.time()
     # Load the input
@@ -142,6 +143,7 @@ def run_krone():
     print("Output:", output)
 
     return elapsed, output
+
 
 # Load the dataset
 iris = datasets.load_iris()

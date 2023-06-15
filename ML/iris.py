@@ -7,6 +7,21 @@ from torch import nn
 from torch import optim
 from ML.model import Net
 
+
+def test(model: Net, X: torch.Tensor, y: torch.Tensor) -> None:
+    # Test the model
+    model.eval()
+    with torch.no_grad():
+        correct = 0
+        total = 0
+        outputs = model(X)
+        _, predicted = torch.max(outputs.data, 1)
+        total += y.size(0)
+        correct += (predicted == y).sum().item()
+
+    print(f"Accuracy: {100 * correct / total}%")
+
+
 # Load the dataset
 iris = datasets.load_iris()
 X = iris.data
@@ -46,28 +61,12 @@ for epoch in range(1_000):
         print(f"Epoch: {epoch}, Loss: {loss.item()}")
 
 # Test the model
-model.eval()
-with torch.no_grad():
-    correct = 0
-    total = 0
-    outputs = model(X_test)
-    _, predicted = torch.max(outputs.data, 1)
-    total += y_test.size(0)
-    correct += (predicted == y_test).sum().item()
-
-print(f"Accuracy of the model on the test set: {100 * correct / total}%")
+print("Testing the model...")
+test(model, X_test, y_test)
 
 # Test the model on the whole dataset
-model.eval()
-with torch.no_grad():
-    correct = 0
-    total = 0
-    outputs = model(X)
-    _, predicted = torch.max(outputs.data, 1)
-    total += y.size(0)
-    correct += (predicted == y).sum().item()
-
-print(f"Accuracy of the model on the whole dataset: {100 * correct / total}%")
+print("Testing the model on the whole dataset...")
+test(model, X, y)
 
 # Save the model
 state_dict = model.state_dict()

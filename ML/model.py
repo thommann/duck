@@ -5,9 +5,9 @@ from torch import nn
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.fc1 = nn.Linear(4, 100)
-        self.fc2 = nn.Linear(100, 50)
-        self.fc3 = nn.Linear(50, 3)
+        self.fc1 = nn.Linear(4, 1000)
+        self.fc2 = nn.Linear(1000, 500)
+        self.fc3 = nn.Linear(500, 3)
 
     def forward(self, x):
         h1 = self.fc1(x)
