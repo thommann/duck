@@ -57,7 +57,7 @@ for col_decomposition in col_decompositions:
                     mat_c = np.loadtxt(f"data/matrices/{full_name}.csv", delimiter=",")
 
                     database = f"data/databases/{name}_{row}x{col}{col_suffix}{max_rank_suffix}.db"
-                    con = duckdb.connect(database=database, read_only=True)
+                    con = duckdb.connect(database=database)
                     con.execute(config)
 
                     for permutation in range(permutations):

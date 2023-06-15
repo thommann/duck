@@ -27,7 +27,7 @@ def print_error_and_speedup(original_query: str, kronecker_query: str, database:
 def query_results(original_query: str, kronecker_query: str, database: str,
                   provided_con: duckdb.DuckDBPyConnection = None) -> tuple[float, float]:
     if provided_con is None:
-        con = duckdb.connect(database=database, read_only=True)
+        con = duckdb.connect(database=database)
     else:
         con = provided_con
 
@@ -53,7 +53,7 @@ def query_profiling(original_query: str,
                (kronecker_query, kronecker_timings)]
 
     if provided_con is None:
-        con = duckdb.connect(database=database, read_only=True)
+        con = duckdb.connect(database=database)
         con.execute(config)
     else:
         con = provided_con
