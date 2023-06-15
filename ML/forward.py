@@ -51,4 +51,3 @@ with torch.no_grad():
     correct += (predicted == y_0).sum().item()
 
 print(f"Accuracy of the model on the first input: {100 * correct / total}%")
-
