@@ -1,1 +1,1 @@
-middle_layer = 10000, 500
+middle_layer = 100, 50

@@ -17,10 +17,24 @@ def insert(con: duckdb.DuckDBPyConnection, table: str, x: np.ndarray) -> str:
     return table
 
 
-def execute(con: duckdb.DuckDBPyConnection, table: str, query: str) -> str:
-    query = f"CREATE OR REPLACE TABLE {table} AS (\n{query}\n)"
-    con.execute(query)
+def insert_alt(con: duckdb.DuckDBPyConnection, table: str, x: np.ndarray) -> str:
+    con.execute(f"CREATE OR REPLACE TABLE {table} (row_id INTEGER, value DOUBLE)")
+    for i, val in enumerate(x):
+        con.execute(f"INSERT INTO {table} VALUES ({i + 1}, {val})")
+    con.execute(f"INSERT INTO {table} VALUES (0, 1)")
     return table
+
+
+def insert_krone(con: duckdb.DuckDBPyConnection, table_a: str, table_b: str, x: np.ndarray) -> tuple[str, str]:
+    a, b = calculate_kronecker(x, k=1)
+    con.execute(f"CREATE OR REPLACE TABLE {table_a} (row_id INTEGER, value DOUBLE)")
+    for i, val in enumerate(a[:, 0]):
+        con.execute(f"INSERT INTO {table_a} VALUES ({i + 1}, {val})")
+    con.execute(f"CREATE OR REPLACE TABLE {table_b} (row_id INTEGER, value DOUBLE)")
+    for i, val in enumerate(b[:, 0]):
+        con.execute(f"INSERT INTO {table_b} VALUES ({i + 1}, {val})")
+
+    return table_a, table_b
 
 
 def linear(cols: int, z_relation: str, w_relation: str, b_relation: str) -> str:
@@ -40,24 +54,23 @@ a AS (
     return query
 
 
-def relu(h_relation: str) -> str:
-    return f"SELECT row_id, CASE WHEN value < 0 THEN 0 ELSE value END AS value FROM {h_relation}"
-
-
-def softmax(h_relation: str) -> str:
-    return f"SELECT row_id, EXP(value) / SUM(EXP(value)) OVER () AS value FROM {h_relation}"
-
-
-def insert_krone(con: duckdb.DuckDBPyConnection, table_a: str, table_b: str, x: np.ndarray) -> tuple[str, str]:
-    a, b = calculate_kronecker(x, k=1)
-    con.execute(f"CREATE OR REPLACE TABLE {table_a} (row_id INTEGER, value DOUBLE)")
-    for i, val in enumerate(a[:, 0]):
-        con.execute(f"INSERT INTO {table_a} VALUES ({i + 1}, {val})")
-    con.execute(f"CREATE OR REPLACE TABLE {table_b} (row_id INTEGER, value DOUBLE)")
-    for i, val in enumerate(b[:, 0]):
-        con.execute(f"INSERT INTO {table_b} VALUES ({i + 1}, {val})")
-
-    return table_a, table_b
+def linear_alt(cols: int, z_relation: str, fc_relation: str) -> str:
+    terms_a = []
+    terms_h = []
+    for i in range(cols):
+        terms_a.append(
+            f"SUM(Z.value * FC.column{i:{len(str(int(cols - 1))):02d}d}) AS column{i:{len(str(int(cols - 1))):02d}d}")
+        terms_h.append(f"SELECT {i + 1} AS row_id, SUM(column{i:{len(str(int(cols - 1))):02d}d}) AS value FROM A")
+    h_query = "\nUNION ALL\n".join(terms_h)
+    query = f"""WITH A AS (
+SELECT {", ".join(terms_a)}
+FROM {z_relation} Z, {fc_relation} FC
+WHERE Z.row_id = FC.row_id
+GROUP BY FC.type
+)
+{h_query}
+"""
+    return query
 
 
 def linear_krone(cols: int, table_z_a: str, table_z_b: str, table_w_a: str, table_w_b: str, b_relation: str) -> str:
@@ -78,6 +91,20 @@ c AS (
     query += "\n)\n"
     query += f"SELECT c.row_id, c.value + b.column0 AS value FROM c, {b_relation} b WHERE c.row_id = b.row_id"
     return query
+
+
+def relu(h_relation: str) -> str:
+    return f"SELECT row_id, CASE WHEN value < 0 THEN 0 ELSE value END AS value FROM {h_relation}"
+
+
+def softmax(h_relation: str) -> str:
+    return f"SELECT row_id, EXP(value) / SUM(EXP(value)) OVER () AS value FROM {h_relation}"
+
+
+def execute(con: duckdb.DuckDBPyConnection, table: str, query: str) -> str:
+    query = f"CREATE OR REPLACE TABLE {table} AS (\n{query}\n)"
+    con.execute(query)
+    return table
 
 
 def run():
@@ -102,11 +129,36 @@ def run():
 
     end = time.time()
     elapsed = end - start
-    print(f"Elapsed: {elapsed * 1000:.0f}ms")
 
     # Get the output
     output = con.execute(f"SELECT * FROM {z3}").fetchall()
-    print("Output:", output)
+
+    return elapsed, output
+
+
+def run_alt():
+    start = time.time()
+    # Load the input
+    input = insert_alt(con, "input", x)
+
+    # Inference query
+    # FC1
+    h1 = execute(con, "h1_alt", linear_alt(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
+    z1 = execute(con, "z1_alt", relu(h1))
+
+    # FC2
+    h2 = execute(con, "h2_alt", linear_alt(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
+    z2 = execute(con, "z2_alt", relu(h2))
+
+    # FC3
+    h3 = execute(con, "h3_alt", linear_alt(3, z2, f"fc3_{middle_layer[1]}x3"))
+    z3 = execute(con, "output_alt", softmax(h3))
+
+    end = time.time()
+    elapsed = end - start
+
+    # Get the output
+    output = con.execute(f"SELECT * FROM {z3}").fetchall()
 
     return elapsed, output
 
@@ -143,11 +195,9 @@ def run_krone():
 
     end = time.time()
     elapsed = end - start
-    print(f"Elapsed: {elapsed * 1000:.0f}ms")
 
     # Get the output
     output = con.execute(f"SELECT * FROM {z3}").fetchall()
-    print("Output:", output)
 
     return elapsed, output
 
@@ -170,9 +220,16 @@ if __name__ == "__main__":
     con.execute(f"PRAGMA threads=48; PRAGMA max_expression_depth={np.max(middle_layer) * 10};")
 
     print("Default:")
-    run()
+    s, _ = run()
+    print(f"{s * 1000:.0f}ms")
+
+    print("Alternative:")
+    s, _ = run_alt()
+    print(f"{s * 1000:.0f}ms")
+
     print("Kronecker:")
-    run_krone()
+    s, _ = run_krone()
+    print(f"{s * 1000:.0f}ms")
 
     con.close()
     print("Done!")

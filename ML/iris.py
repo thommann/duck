@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
@@ -7,6 +6,7 @@ from torch import nn
 from torch import optim
 
 from ML.model import Net
+from ML.params import middle_layer
 
 
 def test(model: Net, x: torch.Tensor, y: torch.Tensor) -> None:
@@ -44,7 +44,7 @@ X = torch.tensor(X, dtype=torch.float)
 y = torch.tensor(y, dtype=torch.long)
 
 # Define the model
-model = Net()
+model = Net(middle_layer)
 
 # Define loss function and optimizer
 criterion = nn.CrossEntropyLoss()
@@ -71,10 +71,4 @@ test(model, X, y)
 
 # Save the model
 state_dict = model.state_dict()
-torch.save(state_dict, 'data/iris-model.pth')
-for key, value in state_dict.items():
-    value = np.atleast_2d(value)
-    value = value.T
-    size = value.shape
-    print(key, size)
-    np.savetxt(f"data/{key}_{size[0]}x{size[1]}.csv", value, delimiter=",")
+torch.save(state_dict, f'data/iris-model{middle_layer[0]}x{middle_layer[1]}.pth')
