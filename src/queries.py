@@ -12,7 +12,7 @@ def kronecker_indices(col_idx: int, nr_cols_a: int, nr_cols_b: int, sc: bool, r:
     return col_idx_a, col_idx_b
 
 
-def kronecker_sum_product(col_indices: list[int | str], nr_cols_a: int, nr_cols_b: int,
+def kronecker_sum_product(col_indices: list["int | str"], nr_cols_a: int, nr_cols_b: int,
                           sc: bool = False,
                           max_rank: int = 1,
                           rank_k: int = 1,

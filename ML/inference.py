@@ -167,7 +167,7 @@ if __name__ == "__main__":
     y_0 = y[0]
 
     con = duckdb.connect(f'data/ml{middle_layer[0]}x{middle_layer[1]}.db', read_only=False)
-    con.execute("PRAGMA threads=24; PRAGMA max_expression_depth=100000;")
+    con.execute(f"PRAGMA threads=48; PRAGMA max_expression_depth={np.max(middle_layer) * 10};")
 
     print("Default:")
     run()

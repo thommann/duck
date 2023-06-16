@@ -22,6 +22,9 @@ data/bcols/*
 data/opt-30b/*
 !data/opt-30b/.gitkeep
 
+data/plots/*
+!data/plots/.gitkeep
+
 *.log
 *.pid
 *.wal

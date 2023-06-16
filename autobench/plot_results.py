@@ -18,6 +18,7 @@ def plot(y: np.ndarray, title: str, ylabel: str, filename: str, ylog: bool = Fal
         plt.plot(rows, y[:, i], label=f"{col} cols")
     plt.legend()
     plt.savefig('data/plots/' + filename + '.png')
+    plt.close()
 
 
 for col_decomposition in col_decompositions:
@@ -29,6 +30,7 @@ for col_decomposition in col_decompositions:
         assert k <= max_k
         rank_suffix = f"_rank{k}"
         for nr_factors in factors:
+            print(col_decomposition, k, nr_factors)
             factors_suffix = f"_factors{nr_factors}"
             suffix = f'{factors_suffix}{rank_suffix}{col_suffix}'
 
@@ -97,5 +99,7 @@ for col_decomposition in col_decompositions:
             plt.plot(rows, times_np_kron[:, -1] / 1e9, label=f'NumPy Kronecker {cols[-1]} cols')
             plt.legend()
             plt.savefig('data/plots/times' + suffix + '.png')
+            plt.close()
+            print("Done!")
 
 print("All Done!")

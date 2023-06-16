@@ -20,8 +20,7 @@ for matrix in matrices:
     print(f"Processing {matrix}...", end='\r', flush=True)
     table_name = matrix.replace('.', '_')
     filepath = f"data/{matrix}.csv"
-    con.execute(f"DROP TABLE IF EXISTS {table_name}")
-    con.execute(f"CREATE TABLE {table_name} AS SELECT ROW_NUMBER() OVER () AS row_id, * FROM '{filepath}'")
+    con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT ROW_NUMBER() OVER () AS row_id, * FROM '{filepath}'")
     print(f"Processing {matrix}... Done!", flush=True)
 
 con.close()
