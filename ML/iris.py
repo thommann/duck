@@ -51,7 +51,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.01)
 
 # Train the model
-for epoch in range(1_000):
+for epoch in range(10_000):
     optimizer.zero_grad()
     output = model(X_train)
     loss = criterion(output, y_train)
@@ -60,6 +60,8 @@ for epoch in range(1_000):
 
     if epoch % 50 == 0:
         print(f"Epoch: {epoch}, Loss: {loss.item()}")
+    if loss.item() < 0.6:
+        break
 
 # Test the model
 print("Testing the model...")

@@ -58,8 +58,8 @@ X = torch.tensor(X, dtype=torch.float)
 y = torch.tensor(y, dtype=torch.long)
 
 # Load iris model
-middle_layer_a = [10, 5]
-middle_layer_b = [10, 10]
+middle_layer_a = [25, 20]
+middle_layer_b = [40, 25]
 model = KroneNet(middle_layer_a, middle_layer_b)
 model.load_state_dict(torch.load(f'data/iris-model{middle_layer[0]}x{middle_layer[1]}krone.pth'))
 
@@ -76,8 +76,9 @@ test(model, X_krone, y)
 
 # Fine-tune the model
 criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-for epoch in range(1_000):
+optimizer = torch.optim.SGD(model.parameters(), lr=0.04)
+
+for epoch in range(10_000):
     optimizer.zero_grad()
     output = model(X_krone_train)
     loss = criterion(output, y_train)
@@ -85,6 +86,8 @@ for epoch in range(1_000):
     optimizer.step()
     if epoch % 50 == 0:
         print(f"Epoch {epoch} loss: {loss.item()}")
+    if loss.item() < 0.6:
+        break
 
 print("Test fine-tuned model on the test dataset")
 test(model, X_krone_test, y_test)
