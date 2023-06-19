@@ -1,5 +1,7 @@
 import duckdb
+import numpy as np
 
+from ML.calculate_kronecker import calculate_kronecker
 from ML.params import middle_layer
 
 matrices = [f'fc1.weight_4x{middle_layer[0]}', f'fc1.bias_{middle_layer[0]}x1',
@@ -12,8 +14,11 @@ kron_matrices = [f'fc1.weight_4x{middle_layer[0]}_a', f'fc1.weight_4x{middle_lay
                  f'fc2.bias_{middle_layer[1]}x1_b', f'fc3.weight_{middle_layer[1]}x3_a',
                  f'fc3.weight_{middle_layer[1]}x3_b',
                  f'fc3.bias_3x1_a', f'fc3.bias_3x1_b']
+alt_kron_matrices = [f'fc1_4x{middle_layer[0]}_a', f'fc1_4x{middle_layer[0]}_b',
+                     f'fc2_{middle_layer[0]}x{middle_layer[1]}_a', f'fc2_{middle_layer[0]}x{middle_layer[1]}_b',
+                     f'fc3_{middle_layer[1]}x3_a', f'fc3_{middle_layer[1]}x3_b']
 
-matrices += kron_matrices
+matrices += kron_matrices + alt_kron_matrices
 
 con = duckdb.connect(f'data/ml{middle_layer[0]}x{middle_layer[1]}.db', read_only=False)
 for matrix in matrices:

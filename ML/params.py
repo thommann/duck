@@ -1,1 +1,1 @@
-middle_layer = 100, 50
+middle_layer = 200, 100
