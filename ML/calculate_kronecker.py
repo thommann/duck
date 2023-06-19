@@ -4,10 +4,10 @@ from ML.params import middle_layer
 from src.kronecker import svd, compute_shapes, kronecker_decomposition
 
 
-def calculate_kronecker(matrix, k=1) -> tuple[np.ndarray, np.ndarray]:
+def calculate_kronecker(matrix, k=1, cc=False) -> tuple[np.ndarray, np.ndarray]:
     matrix = np.atleast_2d(matrix.T).T
     shape_c = matrix.shape
-    shape_a, shape_b = compute_shapes(shape_c)
+    shape_a, shape_b = compute_shapes(shape_c, compress_cols=cc)
     u, s, vh = svd(matrix, shape_a)
     a, b = kronecker_decomposition(u, s, vh, shape_a, shape_b, k=k)
     return a, b
