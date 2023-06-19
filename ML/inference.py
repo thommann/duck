@@ -73,6 +73,25 @@ GROUP BY FC.type
     return query
 
 
+def linear_alt_pivot(cols: int, z_relation: str, fc_relation: str) -> str:
+    terms_a = []
+    for i in range(cols):
+        terms_a.append(
+            f"SUM(Z.value * FC.column{i:{len(str(int(cols - 1))):02d}d}) AS '{i + 1}'")
+    query = f"""WITH 
+    A AS (
+    SELECT {", ".join(terms_a)}
+    FROM {z_relation} Z, {fc_relation} FC
+    WHERE Z.row_id = FC.row_id
+    ),
+    H AS (
+        UNPIVOT A ON COLUMNS(*) INTO NAME row_id VALUE value
+    )
+    SELECT CAST(row_id AS INTEGER) row_id, value FROM H
+    """
+    return query
+
+
 def linear_krone(cols: int, table_z_a: str, table_z_b: str, table_w_a: str, table_w_b: str, b_relation: str) -> str:
     query = f"""WITH
 A AS (
@@ -163,6 +182,33 @@ def run_alt():
     return elapsed, output
 
 
+def run_alt_pivot():
+    start = time.time()
+    # Load the input
+    input = insert_alt(con, "input", x)
+
+    # Inference query
+    # FC1
+    h1 = execute(con, "h1_alt", linear_alt_pivot(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
+    z1 = execute(con, "z1_alt", relu(h1))
+
+    # FC2
+    h2 = execute(con, "h2_alt", linear_alt_pivot(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
+    z2 = execute(con, "z2_alt", relu(h2))
+
+    # FC3
+    h3 = execute(con, "h3_alt", linear_alt_pivot(3, z2, f"fc3_{middle_layer[1]}x3"))
+    z3 = execute(con, "output_alt", softmax(h3))
+
+    end = time.time()
+    elapsed = end - start
+
+    # Get the output
+    output = con.execute(f"SELECT * FROM {z3}").fetchall()
+
+    return elapsed, output
+
+
 def run_krone():
     start = time.time()
     # Load the input
@@ -220,12 +266,18 @@ if __name__ == "__main__":
     con.execute(f"PRAGMA threads=48; PRAGMA max_expression_depth={np.max(middle_layer) * 10};")
 
     print("Default:")
-    s, _ = run()
+    s, res = run()
     print(f"{s * 1000:.0f}ms")
+    print(f"Output: {res}")
 
     print("Alternative:")
     s, _ = run_alt()
     print(f"{s * 1000:.0f}ms")
+
+    print("Alternative (with pivot):")
+    s, res = run_alt_pivot()
+    print(f"{s * 1000:.0f}ms")
+    print(f"Output: {res}")
 
     print("Kronecker:")
     s, _ = run_krone()
