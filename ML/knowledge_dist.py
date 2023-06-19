@@ -19,7 +19,7 @@ def test(model: KroneNet, x: torch.Tensor, y: torch.Tensor) -> None:
         total += y.size(0)
         correct += (predicted == y).sum().item()
 
-    print(f"Accuracy: {100 * correct / total}%")
+    print(f"Accuracy: {100 * correct / total:.2f}%")
 
 
 def krone_input(X: torch.Tensor):
