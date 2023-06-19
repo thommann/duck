@@ -204,180 +204,80 @@ def execute(con: duckdb.DuckDBPyConnection, table: str, query: str) -> str:
     return table
 
 
-def run():
-    start = time.time()
+def run_default(con: duckdb.DuckDBPyConnection,
+                insert: callable, linear: callable, relu: callable, softmax: callable,
+                suffix: str = "") -> str:
     # Load the input
-    input = insert(con, "input", x)
+    input = insert(con, f"input{suffix}", x)
 
     # Inference query
     # FC1
-    h1 = execute(con, "h1",
+    h1 = execute(con, f"h1{suffix}",
                  linear(middle_layer[0], input, f"fc1_weight_4x{middle_layer[0]}", f"fc1_bias_{middle_layer[0]}x1"))
-    z1 = execute(con, "z1", relu(h1))
+    z1 = execute(con, f"z1{suffix}", relu(h1))
 
     # FC2
-    h2 = execute(con, "h2", linear(middle_layer[1], z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}",
-                                   f"fc2_bias_{middle_layer[1]}x1"))
-    z2 = execute(con, "z2", relu(h2))
+    h2 = execute(con, f"h2{suffix}", linear(middle_layer[1], z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}",
+                                            f"fc2_bias_{middle_layer[1]}x1"))
+    z2 = execute(con, f"z2{suffix}", relu(h2))
 
     # FC3
-    h3 = execute(con, "h3", linear(3, z2, f"fc3_weight_{middle_layer[1]}x3", f"fc3_bias_3x1"))
-    z3 = execute(con, "output", softmax(h3))
+    h3 = execute(con, f"h3{suffix}", linear(3, z2, f"fc3_weight_{middle_layer[1]}x3", f"fc3_bias_3x1"))
+    z3 = execute(con, f"output{suffix}", softmax(h3))
 
-    end = time.time()
-    elapsed = end - start
-
-    # Get the output
-    output = con.execute(f"SELECT * FROM {z3}").fetchall()
-
-    return elapsed, output
+    return z3
 
 
-def run_positional():
-    start = time.time()
+def run_alt(con: duckdb.DuckDBPyConnection,
+            insert: callable, linear: callable, relu: callable, softmax: callable,
+            suffix: str = "") -> str:
     # Load the input
-    input = insert_positional(con, "input", x)
+    input = insert(con, f"input{suffix}", x)
 
     # Inference query
     # FC1
-    h1 = execute(con, "h1_pos",
-                 linear_positional(middle_layer[0], input, f"fc1_weight_4x{middle_layer[0]}",
-                                   f"fc1_bias_{middle_layer[0]}x1"))
-    z1 = execute(con, "z1_pos", relu_positional(h1))
+    h1 = execute(con, f"h1{suffix}",
+                 linear(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
+    z1 = execute(con, f"z1{suffix}", relu(h1))
 
     # FC2
-    h2 = execute(con, "h2_pos",
-                 linear_positional(middle_layer[1], z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}",
-                                   f"fc2_bias_{middle_layer[1]}x1"))
-    z2 = execute(con, "z2_pos", relu_positional(h2))
+    h2 = execute(con, f"h2{suffix}", linear(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
+    z2 = execute(con, f"z2{suffix}", relu(h2))
 
     # FC3
-    h3 = execute(con, "h3_pos", linear_positional(3, z2, f"fc3_weight_{middle_layer[1]}x3", f"fc3_bias_3x1"))
-    z3 = execute(con, "output_pos", softmax_positional(h3))
+    h3 = execute(con, f"h3{suffix}", linear(3, z2, f"fc3_{middle_layer[1]}x3"))
+    z3 = execute(con, f"output{suffix}", softmax(h3))
 
-    end = time.time()
-    elapsed = end - start
-
-    # Get the output
-    output = con.execute(f"SELECT * FROM {z3}").fetchall()
-
-    return elapsed, output
+    return z3
 
 
-def run_pivot_pos():
-    start = time.time()
-    # Load the input
-    input = insert_positional(con, "input", x)
-
-    # Inference query
-    # FC1
-    h1 = execute(con, "h1_pivot_pos",
-                 linear_pivot_pos(middle_layer[0], input, f"fc1_weight_4x{middle_layer[0]}",
-                                  f"fc1_bias_{middle_layer[0]}x1"))
-    z1 = execute(con, "z1_pivot_pos", relu_positional(h1))
-
-    # FC2
-    h2 = execute(con, "h2_pivot_pos",
-                 linear_pivot_pos(middle_layer[1], z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}",
-                                  f"fc2_bias_{middle_layer[1]}x1"))
-    z2 = execute(con, "z2_pivot_pos", relu_positional(h2))
-
-    # FC3
-    h3 = execute(con, "h3_pivot_pos", linear_pivot_pos(3, z2, f"fc3_weight_{middle_layer[1]}x3", f"fc3_bias_3x1"))
-    z3 = execute(con, "output_pivot_pos", softmax_positional(h3))
-
-    end = time.time()
-    elapsed = end - start
-
-    # Get the output
-    output = con.execute(f"SELECT * FROM {z3}").fetchall()
-
-    return elapsed, output
+def run_row_idx() -> str:
+    return run_default(con, insert, linear, relu, softmax)
 
 
-def run_alt():
-    start = time.time()
-    # Load the input
-    input = insert_alt(con, "input", x)
-
-    # Inference query
-    # FC1
-    h1 = execute(con, "h1_alt", linear_alt(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
-    z1 = execute(con, "z1_alt", relu(h1))
-
-    # FC2
-    h2 = execute(con, "h2_alt", linear_alt(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
-    z2 = execute(con, "z2_alt", relu(h2))
-
-    # FC3
-    h3 = execute(con, "h3_alt", linear_alt(3, z2, f"fc3_{middle_layer[1]}x3"))
-    z3 = execute(con, "output_alt", softmax(h3))
-
-    end = time.time()
-    elapsed = end - start
-
-    # Get the output
-    output = con.execute(f"SELECT * FROM {z3}").fetchall()
-
-    return elapsed, output
+def run_positional() -> str:
+    return run_default(con, insert_positional, linear_positional, relu_positional, softmax_positional, suffix="_pos")
 
 
-def run_alt_pivot():
-    start = time.time()
-    # Load the input
-    input = insert_alt(con, "input", x)
-
-    # Inference query
-    # FC1
-    h1 = execute(con, "h1_alt_pivot", linear_alt_pivot(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
-    z1 = execute(con, "z1_alt_pivot", relu(h1))
-
-    # FC2
-    h2 = execute(con, "h2_alt_pivot", linear_alt_pivot(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
-    z2 = execute(con, "z2_alt_pivot", relu(h2))
-
-    # FC3
-    h3 = execute(con, "h3_alt_pivot", linear_alt_pivot(3, z2, f"fc3_{middle_layer[1]}x3"))
-    z3 = execute(con, "output_alt_pivot", softmax(h3))
-
-    end = time.time()
-    elapsed = end - start
-
-    # Get the output
-    output = con.execute(f"SELECT * FROM {z3}").fetchall()
-
-    return elapsed, output
+def run_pivot_pos() -> str:
+    return run_default(con, insert_positional, linear_pivot_pos, relu_positional, softmax_positional,
+                       suffix="_pivot_pos")
 
 
-def run_alt_pivot_pos():
-    start = time.time()
-    # Load the input
-    input = insert_alt_pos(con, "input", x)
+def run_alt_row_idx() -> str:
+    return run_alt(con, insert_alt, linear_alt, relu, softmax, suffix="_alt")
 
-    # Inference query
-    # FC1
-    h1 = execute(con, "h1_alt_pivot_pos", linear_alt_pivot_pos(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
-    z1 = execute(con, "z1_alt_pivot_pos", relu_positional(h1))
 
-    # FC2
-    h2 = execute(con, "h2_alt_pivot_pos", linear_alt_pivot_pos(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
-    z2 = execute(con, "z2_alt_pivot_pos", relu_positional(h2))
+def run_alt_pivot() -> str:
+    return run_alt(con, insert_alt, linear_alt_pivot, relu, softmax, suffix="_alt_pivot")
 
-    # FC3
-    h3 = execute(con, "h3_alt_pivot_pos", linear_alt_pivot_pos(3, z2, f"fc3_{middle_layer[1]}x3"))
-    z3 = execute(con, "output_alt_pivot_pos", softmax_positional(h3))
 
-    end = time.time()
-    elapsed = end - start
-
-    # Get the output
-    output = con.execute(f"SELECT * FROM {z3}").fetchall()
-
-    return elapsed, output
+def run_alt_pivot_pos() -> str:
+    return run_alt(con, insert_alt_pos, linear_alt_pivot_pos, relu_positional, softmax_positional,
+                       suffix="_alt_pivot_pos")
 
 
 def run_krone():
-    start = time.time()
     # Load the input
     input_a, input_b = insert_krone(con, "input_a", "input_b", x)
 
@@ -406,13 +306,20 @@ def run_krone():
                               f"fc3_bias_3x1"))
     z3 = execute(con, "output_kron", softmax(h3))
 
-    end = time.time()
-    elapsed = end - start
+    return z3
 
-    # Get the output
-    output = con.execute(f"SELECT * FROM {z3}").fetchall()
 
-    return elapsed, output
+def time_run(runner: callable, title: str):
+    _ = runner()
+    print(title)
+    times = []
+    for i in range(10):
+        start = time.time()
+        _ = runner()
+        s = time.time() - start
+        times.append(s)
+    print(f"Average: {np.mean(times) * 1000:.0f}ms")
+    print()
 
 
 if __name__ == "__main__":
@@ -432,47 +339,13 @@ if __name__ == "__main__":
     con = duckdb.connect(f'data/ml{middle_layer[0]}x{middle_layer[1]}.db', read_only=False)
     con.execute(f"PRAGMA threads=48; PRAGMA max_expression_depth={np.max(middle_layer) * 10};")
 
-    print("Default:")
-    s, res = run()
-    print(f"{s * 1000:.0f}ms")
-    print(f"Output: {res}")
-    print()
-
-    print("Default (with positional):")
-    s, res = run_positional()
-    print(f"{s * 1000:.0f}ms")
-    print(f"Output: {res}")
-    print()
-
-    print("Default (with pivot and positional):")
-    s, res = run_pivot_pos()
-    print(f"{s * 1000:.0f}ms")
-    print(f"Output: {res}")
-    print()
-
-    print("Alternative:")
-    s, res = run_alt()
-    print(f"{s * 1000:.0f}ms")
-    print(f"Output: {res}")
-    print()
-
-    print("Alternative (with pivot):")
-    s, res = run_alt_pivot()
-    print(f"{s * 1000:.0f}ms")
-    print(f"Output: {res}")
-    print()
-
-    print("Alternative (with pivot and positional):")
-    s, res = run_alt_pivot_pos()
-    print(f"{s * 1000:.0f}ms")
-    print(f"Output: {res}")
-    print()
-
-    print("Kronecker:")
-    s, res = run_krone()
-    print(f"{s * 1000:.0f}ms")
-    print(f"Output: {res}")
-    print()
+    time_run(run_row_idx, "Default")
+    time_run(run_positional, "Default (with positional)")
+    time_run(run_pivot_pos, "Default (with pivot and positional)")
+    time_run(run_alt_row_idx, "Alternative")
+    time_run(run_alt_pivot, "Alternative (with pivot)")
+    time_run(run_alt_pivot_pos, "Alternative (with pivot and positional)")
+    time_run(run_krone, "Kronecker")
 
     con.close()
     print("Done!")
