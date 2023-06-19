@@ -54,11 +54,11 @@ def insert_krone(con: duckdb.DuckDBPyConnection, table_a: str, table_b: str, x: 
 
 def linear(cols: int, z_relation: str, w_relation: str, b_relation: str) -> str:
     query = f"""WITH
-combo AS (
-SELECT * FROM {z_relation} z, {w_relation} w WHERE z.row_id = w.row_id
-),
-a AS (
-"""
+    combo AS (
+    SELECT * FROM {z_relation} z, {w_relation} w WHERE z.row_id = w.row_id
+    ),
+    a AS (
+    """
     terms = []
     for i in range(cols):
         terms.append(f"SELECT {i + 1} AS row_id, SUM(c.value * c.column{i:{len(str(int(cols - 1))):02d}d}) AS value "
@@ -71,18 +71,41 @@ a AS (
 
 def linear_positional(cols: int, z_relation: str, w_relation: str, b_relation: str) -> str:
     query = f"""WITH
-combo AS (
-SELECT * FROM {z_relation} POSITIONAL JOIN {w_relation}
-),
-a AS (
-"""
+    combo AS (
+    SELECT * FROM {z_relation} POSITIONAL JOIN {w_relation}
+    ),
+    a AS (
+    """
     terms = []
     for i in range(cols):
         terms.append(f"SELECT SUM(c.value * c.column{i:{len(str(int(cols - 1))):02d}d}) AS value "
                      f"FROM combo c")
     query += "\nUNION ALL\n".join(terms)
     query += "\n)\n"
-    query += f"SELECT value + column0 AS value FROM a POSITIONAL JOIN {b_relation} b"
+    query += f"SELECT value + column0 AS value FROM a POSITIONAL JOIN {b_relation}"
+    return query
+
+
+def linear_pivot_pos(cols: int, z_relation: str, w_relation: str, b_relation: str) -> str:
+    query = f"""WITH
+    combo AS (
+    SELECT * FROM {z_relation} POSITIONAL JOIN {w_relation}
+    ),
+    A AS (
+    SELECT """
+    terms = []
+    for i in range(cols):
+        terms.append(f"SUM(c.value * c.column{i:{len(str(int(cols - 1))):02d}d})")
+    query += " , ".join(terms)
+    query += """
+    FROM combo c
+    ),
+    aT AS (
+    UNPIVOT A ON COLUMNS(*) INTO NAME row_id VALUE value
+    )
+    """
+
+    query += f"SELECT value + column0 AS value FROM aT POSITIONAL JOIN {b_relation}"
     return query
 
 
@@ -95,17 +118,17 @@ def linear_alt(cols: int, z_relation: str, fc_relation: str) -> str:
         terms_h.append(f"SELECT {i + 1} AS row_id, SUM(column{i:{len(str(int(cols - 1))):02d}d}) AS value FROM A")
     h_query = "\nUNION ALL\n".join(terms_h)
     query = f"""WITH A AS (
-SELECT {", ".join(terms_a)}
-FROM {z_relation} Z, {fc_relation} FC
-WHERE Z.row_id = FC.row_id
-GROUP BY FC.type
-)
-{h_query}
-"""
+    SELECT {", ".join(terms_a)}
+    FROM {z_relation} Z, {fc_relation} FC
+    WHERE Z.row_id = FC.row_id
+    GROUP BY FC.type
+    )
+    {h_query}
+    """
     return query
 
 
-def linear_pivot(cols: int, z_relation: str, fc_relation: str) -> str:
+def linear_alt_pivot(cols: int, z_relation: str, fc_relation: str) -> str:
     terms_a = []
     for i in range(cols):
         terms_a.append(
@@ -124,7 +147,7 @@ def linear_pivot(cols: int, z_relation: str, fc_relation: str) -> str:
     return query
 
 
-def linear_pivot_pos(cols: int, z_relation: str, fc_relation: str) -> str:
+def linear_alt_pivot_pos(cols: int, z_relation: str, fc_relation: str) -> str:
     terms_a = []
     for i in range(cols):
         terms_a.append(
@@ -141,14 +164,14 @@ def linear_pivot_pos(cols: int, z_relation: str, fc_relation: str) -> str:
 
 def linear_krone(cols: int, table_z_a: str, table_z_b: str, table_w_a: str, table_w_b: str, b_relation: str) -> str:
     query = f"""WITH
-A AS (
-SELECT * FROM {table_z_a} z, {table_w_a} w WHERE z.row_id = w.row_id
-),
-B AS (
-SELECT * FROM {table_z_b} z, {table_w_b} w WHERE z.row_id = w.row_id
-),
-c AS (
-"""
+    A AS (
+    SELECT * FROM {table_z_a} z, {table_w_a} w WHERE z.row_id = w.row_id
+    ),
+    B AS (
+    SELECT * FROM {table_z_b} z, {table_w_b} w WHERE z.row_id = w.row_id
+    ),
+    c AS (
+    """
     terms = []
     for i in range(cols):
         sum_product = kronecker_sum_product(["value", i], cols, 1)
@@ -223,13 +246,45 @@ def run_positional():
     z1 = execute(con, "z1_pos", relu_positional(h1))
 
     # FC2
-    h2 = execute(con, "h2_pos", linear_positional(middle_layer[1], z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}",
-                                              f"fc2_bias_{middle_layer[1]}x1"))
+    h2 = execute(con, "h2_pos",
+                 linear_positional(middle_layer[1], z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}",
+                                   f"fc2_bias_{middle_layer[1]}x1"))
     z2 = execute(con, "z2_pos", relu_positional(h2))
 
     # FC3
     h3 = execute(con, "h3_pos", linear_positional(3, z2, f"fc3_weight_{middle_layer[1]}x3", f"fc3_bias_3x1"))
     z3 = execute(con, "output_pos", softmax_positional(h3))
+
+    end = time.time()
+    elapsed = end - start
+
+    # Get the output
+    output = con.execute(f"SELECT * FROM {z3}").fetchall()
+
+    return elapsed, output
+
+
+def run_pivot_pos():
+    start = time.time()
+    # Load the input
+    input = insert_positional(con, "input", x)
+
+    # Inference query
+    # FC1
+    h1 = execute(con, "h1_pivot_pos",
+                 linear_pivot_pos(middle_layer[0], input, f"fc1_weight_4x{middle_layer[0]}",
+                                  f"fc1_bias_{middle_layer[0]}x1"))
+    z1 = execute(con, "z1_pivot_pos", relu_positional(h1))
+
+    # FC2
+    h2 = execute(con, "h2_pivot_pos",
+                 linear_pivot_pos(middle_layer[1], z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}",
+                                  f"fc2_bias_{middle_layer[1]}x1"))
+    z2 = execute(con, "z2_pivot_pos", relu_positional(h2))
+
+    # FC3
+    h3 = execute(con, "h3_pivot_pos", linear_pivot_pos(3, z2, f"fc3_weight_{middle_layer[1]}x3", f"fc3_bias_3x1"))
+    z3 = execute(con, "output_pivot_pos", softmax_positional(h3))
 
     end = time.time()
     elapsed = end - start
@@ -267,23 +322,23 @@ def run_alt():
     return elapsed, output
 
 
-def run_pivot():
+def run_alt_pivot():
     start = time.time()
     # Load the input
     input = insert_alt(con, "input", x)
 
     # Inference query
     # FC1
-    h1 = execute(con, "h1_pivot", linear_pivot(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
-    z1 = execute(con, "z1_pivot", relu(h1))
+    h1 = execute(con, "h1_alt_pivot", linear_alt_pivot(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
+    z1 = execute(con, "z1_alt_pivot", relu(h1))
 
     # FC2
-    h2 = execute(con, "h2_pivot", linear_pivot(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
-    z2 = execute(con, "z2_pivot", relu(h2))
+    h2 = execute(con, "h2_alt_pivot", linear_alt_pivot(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
+    z2 = execute(con, "z2_alt_pivot", relu(h2))
 
     # FC3
-    h3 = execute(con, "h3_pivot", linear_pivot(3, z2, f"fc3_{middle_layer[1]}x3"))
-    z3 = execute(con, "output_pivot", softmax(h3))
+    h3 = execute(con, "h3_alt_pivot", linear_alt_pivot(3, z2, f"fc3_{middle_layer[1]}x3"))
+    z3 = execute(con, "output_alt_pivot", softmax(h3))
 
     end = time.time()
     elapsed = end - start
@@ -293,23 +348,24 @@ def run_pivot():
 
     return elapsed, output
 
-def run_pivot_pos():
+
+def run_alt_pivot_pos():
     start = time.time()
     # Load the input
     input = insert_alt_pos(con, "input", x)
 
     # Inference query
     # FC1
-    h1 = execute(con, "h1_pivot_pos", linear_pivot_pos(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
-    z1 = execute(con, "z1_pivot_pos", relu_positional(h1))
+    h1 = execute(con, "h1_alt_pivot_pos", linear_alt_pivot_pos(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
+    z1 = execute(con, "z1_alt_pivot_pos", relu_positional(h1))
 
     # FC2
-    h2 = execute(con, "h2_pivot_pos", linear_pivot_pos(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
-    z2 = execute(con, "z2_pivot_pos", relu_positional(h2))
+    h2 = execute(con, "h2_alt_pivot_pos", linear_alt_pivot_pos(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
+    z2 = execute(con, "z2_alt_pivot_pos", relu_positional(h2))
 
     # FC3
-    h3 = execute(con, "h3_pivot_pos", linear_pivot_pos(3, z2, f"fc3_{middle_layer[1]}x3"))
-    z3 = execute(con, "output_pivot_pos", softmax_positional(h3))
+    h3 = execute(con, "h3_alt_pivot_pos", linear_alt_pivot_pos(3, z2, f"fc3_{middle_layer[1]}x3"))
+    z3 = execute(con, "output_alt_pivot_pos", softmax_positional(h3))
 
     end = time.time()
     elapsed = end - start
@@ -380,29 +436,43 @@ if __name__ == "__main__":
     s, res = run()
     print(f"{s * 1000:.0f}ms")
     print(f"Output: {res}")
+    print()
 
-    print("Positional:")
+    print("Default (with positional):")
     s, res = run_positional()
     print(f"{s * 1000:.0f}ms")
     print(f"Output: {res}")
+    print()
 
-    print("Alternative:")
-    s, _ = run_alt()
-    print(f"{s * 1000:.0f}ms")
-
-    print("Alternative (with pivot):")
-    s, res = run_pivot()
-    print(f"{s * 1000:.0f}ms")
-    print(f"Output: {res}")
-
-    print("Alternative (with pivot and positional):")
+    print("Default (with pivot and positional):")
     s, res = run_pivot_pos()
     print(f"{s * 1000:.0f}ms")
     print(f"Output: {res}")
+    print()
+
+    print("Alternative:")
+    s, res = run_alt()
+    print(f"{s * 1000:.0f}ms")
+    print(f"Output: {res}")
+    print()
+
+    print("Alternative (with pivot):")
+    s, res = run_alt_pivot()
+    print(f"{s * 1000:.0f}ms")
+    print(f"Output: {res}")
+    print()
+
+    print("Alternative (with pivot and positional):")
+    s, res = run_alt_pivot_pos()
+    print(f"{s * 1000:.0f}ms")
+    print(f"Output: {res}")
+    print()
 
     print("Kronecker:")
-    s, _ = run_krone()
+    s, res = run_krone()
     print(f"{s * 1000:.0f}ms")
+    print(f"Output: {res}")
+    print()
 
     con.close()
     print("Done!")
