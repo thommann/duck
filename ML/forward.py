@@ -3,6 +3,7 @@ from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
 
 from ML.model import Net
+from ML.params import middle_layer
 
 # Load the dataset
 iris = datasets.load_iris()
@@ -18,8 +19,8 @@ X = torch.tensor(X, dtype=torch.float)
 y = torch.tensor(y, dtype=torch.long)
 
 # Load iris model
-model = Net()
-model.load_state_dict(torch.load('data/iris-model.pth'))
+model = Net(middle_layer)
+model.load_state_dict(torch.load(f'data/iris-model{middle_layer[0]}x{middle_layer[1]}.pth'))
 
 # # Test the model on the whole dataset
 # model.eval()
