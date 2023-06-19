@@ -38,3 +38,7 @@ middle_layer_b = [10, 10]
 model = KroneNet(middle_layer_a, middle_layer_b)
 model.load_state_dict(krone_state_dict)
 
+# Save the model
+filename = f'data/iris-model{middle_layer[0]}x{middle_layer[1]}krone.pth'
+torch.save(model.state_dict(), filename)
+print(f"Model saved to {filename}")
