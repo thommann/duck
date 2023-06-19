@@ -17,11 +17,26 @@ def insert(con: duckdb.DuckDBPyConnection, table: str, x: np.ndarray) -> str:
     return table
 
 
+def insert_positional(con: duckdb.DuckDBPyConnection, table: str, x: np.ndarray) -> str:
+    con.execute(f"CREATE OR REPLACE TABLE {table} (value DOUBLE)")
+    for val in x:
+        con.execute(f"INSERT INTO {table} VALUES ({val})")
+    return table
+
+
 def insert_alt(con: duckdb.DuckDBPyConnection, table: str, x: np.ndarray) -> str:
     con.execute(f"CREATE OR REPLACE TABLE {table} (row_id INTEGER, value DOUBLE)")
     for i, val in enumerate(x):
         con.execute(f"INSERT INTO {table} VALUES ({i + 1}, {val})")
     con.execute(f"INSERT INTO {table} VALUES (0, 1)")
+    return table
+
+
+def insert_alt_pos(con: duckdb.DuckDBPyConnection, table: str, x: np.ndarray) -> str:
+    con.execute(f"CREATE OR REPLACE TABLE {table} (value DOUBLE)")
+    for i, val in enumerate(x):
+        con.execute(f"INSERT INTO {table} VALUES ({val})")
+    con.execute(f"INSERT INTO {table} VALUES (1)")
     return table
 
 
@@ -54,6 +69,23 @@ a AS (
     return query
 
 
+def linear_positional(cols: int, z_relation: str, w_relation: str, b_relation: str) -> str:
+    query = f"""WITH
+combo AS (
+SELECT * FROM {z_relation} POSITIONAL JOIN {w_relation}
+),
+a AS (
+"""
+    terms = []
+    for i in range(cols):
+        terms.append(f"SELECT SUM(c.value * c.column{i:{len(str(int(cols - 1))):02d}d}) AS value "
+                     f"FROM combo c")
+    query += "\nUNION ALL\n".join(terms)
+    query += "\n)\n"
+    query += f"SELECT value + column0 AS value FROM a POSITIONAL JOIN {b_relation} b"
+    return query
+
+
 def linear_alt(cols: int, z_relation: str, fc_relation: str) -> str:
     terms_a = []
     terms_h = []
@@ -73,7 +105,7 @@ GROUP BY FC.type
     return query
 
 
-def linear_alt_pivot(cols: int, z_relation: str, fc_relation: str) -> str:
+def linear_pivot(cols: int, z_relation: str, fc_relation: str) -> str:
     terms_a = []
     for i in range(cols):
         terms_a.append(
@@ -88,6 +120,21 @@ def linear_alt_pivot(cols: int, z_relation: str, fc_relation: str) -> str:
         UNPIVOT A ON COLUMNS(*) INTO NAME row_id VALUE value
     )
     SELECT CAST(row_id AS INTEGER) row_id, value FROM H
+    """
+    return query
+
+
+def linear_pivot_pos(cols: int, z_relation: str, fc_relation: str) -> str:
+    terms_a = []
+    for i in range(cols):
+        terms_a.append(
+            f"SUM(value * column{i:{len(str(int(cols - 1))):02d}d})")
+    query = f"""WITH 
+    A AS (
+    SELECT {", ".join(terms_a)}
+    FROM {z_relation} POSITIONAL JOIN {fc_relation}
+    )
+    UNPIVOT A ON COLUMNS(*) INTO NAME row_id VALUE value
     """
     return query
 
@@ -116,8 +163,16 @@ def relu(h_relation: str) -> str:
     return f"SELECT row_id, CASE WHEN value < 0 THEN 0 ELSE value END AS value FROM {h_relation}"
 
 
+def relu_positional(h_relation: str) -> str:
+    return f"SELECT CASE WHEN value < 0 THEN 0 ELSE value END AS value FROM {h_relation}"
+
+
 def softmax(h_relation: str) -> str:
     return f"SELECT row_id, EXP(value) / SUM(EXP(value)) OVER () AS value FROM {h_relation}"
+
+
+def softmax_positional(h_relation: str) -> str:
+    return f"SELECT EXP(value) / SUM(EXP(value)) OVER () AS value FROM {h_relation}"
 
 
 def execute(con: duckdb.DuckDBPyConnection, table: str, query: str) -> str:
@@ -155,6 +210,36 @@ def run():
     return elapsed, output
 
 
+def run_positional():
+    start = time.time()
+    # Load the input
+    input = insert_positional(con, "input", x)
+
+    # Inference query
+    # FC1
+    h1 = execute(con, "h1_pos",
+                 linear_positional(middle_layer[0], input, f"fc1_weight_4x{middle_layer[0]}",
+                                   f"fc1_bias_{middle_layer[0]}x1"))
+    z1 = execute(con, "z1_pos", relu_positional(h1))
+
+    # FC2
+    h2 = execute(con, "h2_pos", linear_positional(middle_layer[1], z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}",
+                                              f"fc2_bias_{middle_layer[1]}x1"))
+    z2 = execute(con, "z2_pos", relu_positional(h2))
+
+    # FC3
+    h3 = execute(con, "h3_pos", linear_positional(3, z2, f"fc3_weight_{middle_layer[1]}x3", f"fc3_bias_3x1"))
+    z3 = execute(con, "output_pos", softmax_positional(h3))
+
+    end = time.time()
+    elapsed = end - start
+
+    # Get the output
+    output = con.execute(f"SELECT * FROM {z3}").fetchall()
+
+    return elapsed, output
+
+
 def run_alt():
     start = time.time()
     # Load the input
@@ -182,23 +267,49 @@ def run_alt():
     return elapsed, output
 
 
-def run_alt_pivot():
+def run_pivot():
     start = time.time()
     # Load the input
     input = insert_alt(con, "input", x)
 
     # Inference query
     # FC1
-    h1 = execute(con, "h1_alt", linear_alt_pivot(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
-    z1 = execute(con, "z1_alt", relu(h1))
+    h1 = execute(con, "h1_pivot", linear_pivot(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
+    z1 = execute(con, "z1_pivot", relu(h1))
 
     # FC2
-    h2 = execute(con, "h2_alt", linear_alt_pivot(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
-    z2 = execute(con, "z2_alt", relu(h2))
+    h2 = execute(con, "h2_pivot", linear_pivot(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
+    z2 = execute(con, "z2_pivot", relu(h2))
 
     # FC3
-    h3 = execute(con, "h3_alt", linear_alt_pivot(3, z2, f"fc3_{middle_layer[1]}x3"))
-    z3 = execute(con, "output_alt", softmax(h3))
+    h3 = execute(con, "h3_pivot", linear_pivot(3, z2, f"fc3_{middle_layer[1]}x3"))
+    z3 = execute(con, "output_pivot", softmax(h3))
+
+    end = time.time()
+    elapsed = end - start
+
+    # Get the output
+    output = con.execute(f"SELECT * FROM {z3}").fetchall()
+
+    return elapsed, output
+
+def run_pivot_pos():
+    start = time.time()
+    # Load the input
+    input = insert_alt_pos(con, "input", x)
+
+    # Inference query
+    # FC1
+    h1 = execute(con, "h1_pivot_pos", linear_pivot_pos(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
+    z1 = execute(con, "z1_pivot_pos", relu_positional(h1))
+
+    # FC2
+    h2 = execute(con, "h2_pivot_pos", linear_pivot_pos(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
+    z2 = execute(con, "z2_pivot_pos", relu_positional(h2))
+
+    # FC3
+    h3 = execute(con, "h3_pivot_pos", linear_pivot_pos(3, z2, f"fc3_{middle_layer[1]}x3"))
+    z3 = execute(con, "output_pivot_pos", softmax_positional(h3))
 
     end = time.time()
     elapsed = end - start
@@ -270,12 +381,22 @@ if __name__ == "__main__":
     print(f"{s * 1000:.0f}ms")
     print(f"Output: {res}")
 
+    print("Positional:")
+    s, res = run_positional()
+    print(f"{s * 1000:.0f}ms")
+    print(f"Output: {res}")
+
     print("Alternative:")
     s, _ = run_alt()
     print(f"{s * 1000:.0f}ms")
 
     print("Alternative (with pivot):")
-    s, res = run_alt_pivot()
+    s, res = run_pivot()
+    print(f"{s * 1000:.0f}ms")
+    print(f"Output: {res}")
+
+    print("Alternative (with pivot and positional):")
+    s, res = run_pivot_pos()
     print(f"{s * 1000:.0f}ms")
     print(f"Output: {res}")
 
