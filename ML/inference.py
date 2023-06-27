@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 
 from ML.calculate_kronecker import calculate_kronecker
 from ML.params import middle_layer
-from src.queries import kronecker_sum_product
+from src.queries import kronecker_sum_product, kronecker_sum_product_separated
 
 
 def insert(con: duckdb.DuckDBPyConnection, table: str, x: np.ndarray) -> str:
@@ -194,15 +194,17 @@ def linear_krone(cols: int, table_z_a: str, table_z_b: str, table_w_a: str, tabl
     SELECT c.row_id, c.value + b.column0 AS value 
     FROM c, {b_relation} b WHERE c.row_id = b.row_id
     """
-    print(query)
     return query
 
 
 def linear_krone_alt_pivot_pos(cols: int, table_z_a: str, table_z_b: str, table_fc_a: str, table_fc_b: str) -> str:
-    terms = []
+    k = 1
+    terms_a: list[str] = []
+    terms_b: list[str] = []
     for i in range(cols):
-        sum_product = kronecker_sum_product(["value", i], cols, 1)
-        terms.append(f"{sum_product}")
+        sums_a, sums_b = kronecker_sum_product_separated(["value", i], cols, 1)
+        terms_a.append(*sums_a)
+        terms_b.append(*sums_b)
     query = f"""WITH
     A AS (
     SELECT * FROM {table_z_a} POSITIONAL JOIN {table_fc_a}
@@ -210,12 +212,19 @@ def linear_krone_alt_pivot_pos(cols: int, table_z_a: str, table_z_b: str, table_
     B AS (
     SELECT * FROM {table_z_b} POSITIONAL JOIN {table_fc_b}
     ),
-    c AS (
-    SELECT {", ".join(terms)}
+    A_sums AS (
+    SELECT {', '.join(terms_a)} FROM A
+    ),
+    B_sums AS (
+    SELECT {', '.join(terms_b)} FROM B
+    ),
+    C AS (
+    FROM (UNPIVOT A_sums ON COLUMNS(*) INTO NAME row_id_a VALUE value) a
+    POSITIONAL JOIN (UNPIVOT B_sums ON COLUMNS(*) INTO NAME row_id_b VALUE value) b
+    SELECT (ROW_NUMBER() OVER () - 1) / {k} AS col_id, a.value * b.value AS value
     )
-    UNPIVOT c ON COLUMNS(*) INTO NAME row_id VALUE value
+    SELECT SUM(value) AS value FROM C GROUP BY col_id
     """
-    print(query)
     return query
 
 
@@ -354,8 +363,8 @@ def run_krone_alt_pivot_pos(con):
     # FC1
     h1 = execute(con, "h1_kron_alt",
                  linear_krone_alt_pivot_pos(middle_layer[0], input_a, input_b,
-                                            f"fc1_4x{middle_layer[0]}_a", f"fc1_4x{middle_layer[0]}_b"))
-    z1 = execute(con, "z1_kron_alt", relu(h1))
+                                              f"fc1_4x{middle_layer[0]}_a", f"fc1_4x{middle_layer[0]}_b"))
+    z1 = execute(con, "z1_kron_alt", relu_positional(h1))
     z1_values = con.execute(f"SELECT value FROM {z1}").fetchall()
     z1_values = np.array(z1_values).reshape(middle_layer[0], 1)
     z1_a, z1_b = insert_krone_alt_pos(con, "z1_a", "z1_b", z1_values)
@@ -363,9 +372,9 @@ def run_krone_alt_pivot_pos(con):
     # FC2
     h2 = execute(con, "h2_kron_alt",
                  linear_krone_alt_pivot_pos(middle_layer[1], z1_a, z1_b,
-                                            f"fc2_{middle_layer[0]}x{middle_layer[1]}_a",
-                                            f"fc2_{middle_layer[0]}x{middle_layer[1]}_b"))
-    z2 = execute(con, "z2_kron_alt", relu(h2))
+                                              f"fc2_{middle_layer[0]}x{middle_layer[1]}_a",
+                                              f"fc2_{middle_layer[0]}x{middle_layer[1]}_b"))
+    z2 = execute(con, "z2_kron_alt", relu_positional(h2))
     z2_values = con.execute(f"SELECT value FROM {z2}").fetchall()
     z2_values = np.array(z2_values).reshape(middle_layer[1], 1)
     z2_a, z2_b = insert_krone_alt_pos(con, "z2_a", "z2_b", z2_values)
@@ -373,8 +382,8 @@ def run_krone_alt_pivot_pos(con):
     # FC3
     h3 = execute(con, "h3_kron_alt",
                  linear_krone_alt_pivot_pos(3, z2_a, z2_b,
-                                            f"fc3_{middle_layer[1]}x3_a", f"fc3_{middle_layer[1]}x3_b"))
-    z3 = execute(con, "output_kron_alt", softmax(h3))
+                                              f"fc3_{middle_layer[1]}x3_a", f"fc3_{middle_layer[1]}x3_b"))
+    z3 = execute(con, "output_kron_alt", softmax_positional(h3))
 
     return z3
 
@@ -385,7 +394,7 @@ def time_run(runner: callable, title: str):
     _ = runner(con)
     print(title, flush=True)
     times = []
-    for i in range(0):
+    for i in range(10):
         start = time.time()
         _ = runner(con)
         s = time.time() - start
@@ -410,12 +419,12 @@ if __name__ == "__main__":
     y_0 = y[0]
 
     # time_run(run_row_idx, "Default")
-    # time_run(run_positional, "Default (with positional)")
-    # time_run(run_pivot_pos, "Default (with pivot and positional)")
+    # time_run(run_positional, "Default (with positional join)")
+    # time_run(run_pivot_pos, "Default (with pivot and positional join)")
     # time_run(run_alt_row_idx, "Alternative")
     # time_run(run_alt_pivot, "Alternative (with pivot)")
-    # time_run(run_alt_pivot_pos, "Alternative (with pivot and positional)")
-    time_run(run_krone, "Kronecker")
-    time_run(run_krone_alt_pivot_pos, "Kronecker (with pivot and positional)")
+    time_run(run_alt_pivot_pos, "Alternative (with pivot and positional join)")
+    # time_run(run_krone, "Kronecker")
+    time_run(run_krone_alt_pivot_pos, "Kronecker alternative (with pivot and positional join)")
 
     print("Done!")

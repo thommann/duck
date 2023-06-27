@@ -41,6 +41,34 @@ def kronecker_sum_product(col_indices: list["int | str"], nr_cols_a: int, nr_col
     return " + ".join(terms)
 
 
+def kronecker_sum_product_separated(col_indices: list["int | str"], nr_cols_a: int, nr_cols_b: int,
+                                    sc: bool = False,
+                                    max_rank: int = 1,
+                                    rank_k: int = 1) -> tuple[list[str], list[str]]:
+    col_format_a = f"{len(str(int(nr_cols_a * max_rank - 1))):02d}d"
+    col_format_b = f"{len(str(int(nr_cols_b * max_rank - 1))):02d}d"
+
+    combinations = itertools.product(*[itertools.product([idx], range(rank_k)) for idx in col_indices])
+    terms_a = []
+    terms_b = []
+    for combination in combinations:
+        products_a = []
+        products_b = []
+        for col_idx, r in combination:
+            if isinstance(col_idx, str):
+                col_a = col_b = col_idx
+            else:
+                col_idx_a, col_idx_b = kronecker_indices(col_idx, nr_cols_a, nr_cols_b, sc, r, max_rank)
+                col_a = f"column{col_idx_a:{col_format_a}}"
+                col_b = f"column{col_idx_b:{col_format_b}}"
+            products_a.append(col_a)
+            products_b.append(col_b)
+        terms_a.append(f"SUM({' * '.join(products_a)})")
+        terms_b.append(f"SUM({' * '.join(products_b)})")
+
+    return terms_a, terms_b
+
+
 def queries(col_indices: list[int],
             nr_cols: int,
             rank_k: int,

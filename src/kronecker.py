@@ -78,7 +78,5 @@ def kronecker_decomposition(u_mat: np.ndarray, s_vec: np.ndarray, vh_mat: np.nda
 
 def svd(matrix: np.ndarray, shape_a: tuple[int, int]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     massaged_matrix = massage(matrix, shape_a)
-    print("Computing SVD...", flush=True)
     u_mat, s_vec, vh_mat = np.linalg.svd(massaged_matrix, full_matrices=False)
-    print("Done.", flush=True)
     return u_mat, s_vec, vh_mat
