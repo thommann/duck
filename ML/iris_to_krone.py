@@ -33,8 +33,8 @@ for key, value in state_dict.items():
     krone_state_dict[key + "_a"] = tensor_a
     krone_state_dict[key + "_b"] = tensor_b
 
-middle_layer_a = [25, 20]
-middle_layer_b = [40, 25]
+middle_layer_a = [10, 5]  # 100 x 50
+middle_layer_b = [10, 10]  # 100 x 50
 model = KroneNet(middle_layer_a, middle_layer_b)
 model.load_state_dict(krone_state_dict)
 

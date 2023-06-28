@@ -44,11 +44,11 @@ X = torch.tensor(X, dtype=torch.float)
 y = torch.tensor(y, dtype=torch.long)
 
 # Define the model
-model = Net(middle_layer)
+model = Net(middle_layer, sigmoid=True)
 
 # Define loss function and optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.01)
+optimizer = optim.SGD(model.parameters(), lr=0.1)
 
 # Train the model
 for epoch in range(10_000):
@@ -60,7 +60,7 @@ for epoch in range(10_000):
 
     if epoch % 50 == 0:
         print(f"Epoch: {epoch}, Loss: {loss.item()}")
-    if loss.item() < 0.6:
+    if loss.item() < 0.5:
         break
 
 # Test the model

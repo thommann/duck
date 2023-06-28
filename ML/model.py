@@ -3,17 +3,18 @@ from torch import nn
 
 
 class Net(nn.Module):
-    def __init__(self, middle_layer):
+    def __init__(self, middle_layer, sigmoid=False):
         super(Net, self).__init__()
         self.fc1 = nn.Linear(4, middle_layer[0])
         self.fc2 = nn.Linear(middle_layer[0], middle_layer[1])
         self.fc3 = nn.Linear(middle_layer[1], 3)
+        self.activation = torch.sigmoid if sigmoid else torch.relu
 
     def forward(self, x):
         h1 = self.fc1(x)
-        z1 = torch.relu(h1)
+        z1 = self.activation(h1)
         h2 = self.fc2(z1)
-        z2 = torch.relu(h2)
+        z2 = self.activation(h2)
         h3 = self.fc3(z2)
         y = torch.softmax(h3, dim=1)
         return y
@@ -23,6 +24,13 @@ def krone_relu(x):
     x_a, x_b = x[0], x[1]
     h_a = torch.relu(x_a)
     h_b = torch.relu(x_b)
+    return torch.stack([h_a, h_b], dim=0)
+
+
+def krone_sigmoid(x):
+    x_a, x_b = x[0], x[1]
+    h_a = torch.sigmoid(x_a)
+    h_b = torch.sigmoid(x_b)
     return torch.stack([h_a, h_b], dim=0)
 
 
@@ -41,10 +49,8 @@ class KroneLinear(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x_a, x_b = x[0], x[1]
         # Remove padding from previous layer
-        if self.in_features_a > self.in_features_b:
-            x_b = x_b[:, :self.in_features_b]
-        elif self.in_features_b > self.in_features_a:
-            x_a = x_a[:, :self.in_features_a]
+        x_b = x_b[:, :self.in_features_b]
+        x_a = x_a[:, :self.in_features_a]
         # Compute output
         h_a = torch.matmul(x_a, self.weight_a.t()) + self.bias_a
         h_b = torch.matmul(x_b, self.weight_b.t()) + self.bias_b
@@ -65,10 +71,8 @@ class KroneSoftmax(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x_a, x_b = x[0], x[1]
         # Remove padding from previous layer
-        if self.in_features_a > self.in_features_b:
-            x_b = x_b[:, :self.in_features_b]
-        elif self.in_features_b > self.in_features_a:
-            x_a = x_a[:, :self.in_features_a]
+        x_b = x_b[:, :self.in_features_b]
+        x_a = x_a[:, :self.in_features_a]
 
         # Compute kronecker product for each sample
         y = torch.zeros(x_a.shape[0], self.in_features_a * self.in_features_b)
@@ -80,18 +84,19 @@ class KroneSoftmax(nn.Module):
 
 
 class KroneNet(nn.Module):
-    def __init__(self, middle_layer_a, middle_layer_b):
+    def __init__(self, middle_layer_a, middle_layer_b, sigmoid=False):
         super(KroneNet, self).__init__()
         self.fc1 = KroneLinear(2, 2, middle_layer_a[0], middle_layer_b[0])
         self.fc2 = KroneLinear(middle_layer_a[0], middle_layer_b[0], middle_layer_a[1], middle_layer_b[1])
         self.fc3 = KroneLinear(middle_layer_a[1], middle_layer_b[1], 1, 3)
         self.softmax = KroneSoftmax(1, 3)
+        self.activation = krone_sigmoid if sigmoid else krone_relu
 
     def forward(self, x):
         h1 = self.fc1(x)
-        z1 = krone_relu(h1)
+        z1 = self.activation(h1)
         h2 = self.fc2(z1)
-        z2 = krone_relu(h2)
+        z2 = self.activation(h2)
         h3 = self.fc3(z2)
         y = self.softmax(h3)
         return y

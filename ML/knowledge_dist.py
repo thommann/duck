@@ -58,9 +58,9 @@ X = torch.tensor(X, dtype=torch.float)
 y = torch.tensor(y, dtype=torch.long)
 
 # Load iris model
-middle_layer_a = [25, 20]
-middle_layer_b = [40, 25]
-model = KroneNet(middle_layer_a, middle_layer_b)
+middle_layer_a = [10, 5]  # 100 x 50
+middle_layer_b = [10, 10]  # 100 x 50
+model = KroneNet(middle_layer_a, middle_layer_b, sigmoid=True)
 model.load_state_dict(torch.load(f'data/iris-model{middle_layer[0]}x{middle_layer[1]}krone.pth'))
 
 # Calculate the Kronecker product of the input
@@ -76,7 +76,7 @@ test(model, X_krone, y)
 
 # Fine-tune the model
 criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.04)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 
 for epoch in range(10_000):
     optimizer.zero_grad()
