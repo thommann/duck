@@ -6,7 +6,7 @@ from torch import nn
 from torch import optim
 
 from ML.model import Net
-from ML.params import middle_layer
+from ML.params import middle_layer, use_sigmoid
 
 
 def test(model: Net, x: torch.Tensor, y: torch.Tensor) -> None:
@@ -44,7 +44,7 @@ X = torch.tensor(X, dtype=torch.float)
 y = torch.tensor(y, dtype=torch.long)
 
 # Define the model
-model = Net(middle_layer, sigmoid=True)
+model = Net(middle_layer, sigmoid=use_sigmoid)
 
 # Define loss function and optimizer
 criterion = nn.CrossEntropyLoss()

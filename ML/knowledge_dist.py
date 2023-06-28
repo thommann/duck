@@ -3,9 +3,9 @@ from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from ML.calculate_kronecker import calculate_kronecker
+from ML.calculate_kronecker import do_decomposition
 from ML.model import KroneNet
-from ML.params import middle_layer
+from ML.params import middle_layer, middle_layer_a, middle_layer_b, use_sigmoid
 
 
 def test(model: KroneNet, x: torch.Tensor, y: torch.Tensor) -> None:
@@ -26,7 +26,7 @@ def krone_input(X: torch.Tensor):
     X_krone_a = []
     X_krone_b = []
     for f_vec in X:
-        f_vec_a, f_vec_b = calculate_kronecker(f_vec.numpy())
+        f_vec_a, f_vec_b = do_decomposition(f_vec.numpy())
         f_vec_a, f_vec_b = torch.tensor(f_vec_a), torch.tensor(f_vec_b)
         f_vec_a = torch.squeeze(f_vec_a, dim=1)
         f_vec_b = torch.squeeze(f_vec_b, dim=1)
@@ -58,9 +58,7 @@ X = torch.tensor(X, dtype=torch.float)
 y = torch.tensor(y, dtype=torch.long)
 
 # Load iris model
-middle_layer_a = [10, 5]  # 100 x 50
-middle_layer_b = [10, 10]  # 100 x 50
-model = KroneNet(middle_layer_a, middle_layer_b, sigmoid=True)
+model = KroneNet(middle_layer_a, middle_layer_b, sigmoid=use_sigmoid)
 model.load_state_dict(torch.load(f'data/iris-model{middle_layer[0]}x{middle_layer[1]}krone.pth'))
 
 # Calculate the Kronecker product of the input

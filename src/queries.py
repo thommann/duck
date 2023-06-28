@@ -12,27 +12,36 @@ def kronecker_indices(col_idx: int, nr_cols_a: int, nr_cols_b: int, sc: bool, r:
     return col_idx_a, col_idx_b
 
 
-def kronecker_sum_product(col_indices: list["int | str"], nr_cols_a: int, nr_cols_b: int,
+def kronecker_sum_product(col_indices: list[int], nr_cols_a: int, nr_cols_b: int,
                           sc: bool = False,
                           max_rank: int = 1,
                           rank_k: int = 1,
                           table_a: str = "A",
-                          table_b: str = "B") -> str:
-    col_format_a = f"{len(str(int(nr_cols_a * max_rank - 1))):02d}d"
-    col_format_b = f"{len(str(int(nr_cols_b * max_rank - 1))):02d}d"
+                          table_b: str = "B",
+                          col_names: "list[str] | None" = None,
+                          col_numbers: "list[tuple[int, int]] | None" = None) -> str:
+    if col_names is None:
+        col_names = ["column" for _ in col_indices]
 
-    combinations = itertools.product(*[itertools.product([idx], range(rank_k)) for idx in col_indices])
+    if col_numbers is None:
+        col_numbers = [(nr_cols_a, nr_cols_b) for _ in col_indices]
+
+    combinations = itertools.product(
+        *[itertools.product(
+            [(idx, name, col_format)], range(rank_k)
+        ) for idx, name, col_format in zip(col_indices, col_names, col_numbers)]
+    )
     terms = []
     for combination in combinations:
         products_a = []
         products_b = []
-        for col_idx, r in combination:
-            if isinstance(col_idx, str):
-                col_a = col_b = col_idx
-            else:
-                col_idx_a, col_idx_b = kronecker_indices(col_idx, nr_cols_a, nr_cols_b, sc, r, max_rank)
-                col_a = f"column{col_idx_a:{col_format_a}}"
-                col_b = f"column{col_idx_b:{col_format_b}}"
+        for col, r in combination:
+            col_idx, col_name, nr_cols = col
+            col_format_a = f"{len(str(int(nr_cols[0] * max_rank - 1))):02d}d"
+            col_format_b = f"{len(str(int(nr_cols[1] * max_rank - 1))):02d}d"
+            col_idx_a, col_idx_b = kronecker_indices(col_idx, nr_cols[0], nr_cols[1], sc, r, max_rank)
+            col_a = f"{col_name}{col_idx_a:{col_format_a}}"
+            col_b = f"{col_name}{col_idx_b:{col_format_b}}"
             products_a.append(col_a)
             products_b.append(col_b)
         terms.append(f"(SELECT SUM({' * '.join(products_a)}) FROM {table_a}) * "
@@ -44,23 +53,32 @@ def kronecker_sum_product(col_indices: list["int | str"], nr_cols_a: int, nr_col
 def kronecker_sum_product_separated(col_indices: list["int | str"], nr_cols_a: int, nr_cols_b: int,
                                     sc: bool = False,
                                     max_rank: int = 1,
-                                    rank_k: int = 1) -> tuple[list[str], list[str]]:
-    col_format_a = f"{len(str(int(nr_cols_a * max_rank - 1))):02d}d"
-    col_format_b = f"{len(str(int(nr_cols_b * max_rank - 1))):02d}d"
+                                    rank_k: int = 1,
+                                    col_names: "list[str] | None" = None,
+                                    col_numbers: "list[tuple[int, int]] | None" = None) -> tuple[list[str], list[str]]:
+    if col_names is None:
+        col_names = ["column" for _ in col_indices]
 
-    combinations = itertools.product(*[itertools.product([idx], range(rank_k)) for idx in col_indices])
+    if col_numbers is None:
+        col_numbers = [(nr_cols_a, nr_cols_b) for _ in col_indices]
+
+    combinations = itertools.product(
+        *[itertools.product(
+            [(idx, name, col_format)], range(rank_k)
+        ) for idx, name, col_format in zip(col_indices, col_names, col_numbers)]
+    )
     terms_a = []
     terms_b = []
     for combination in combinations:
         products_a = []
         products_b = []
-        for col_idx, r in combination:
-            if isinstance(col_idx, str):
-                col_a = col_b = col_idx
-            else:
-                col_idx_a, col_idx_b = kronecker_indices(col_idx, nr_cols_a, nr_cols_b, sc, r, max_rank)
-                col_a = f"column{col_idx_a:{col_format_a}}"
-                col_b = f"column{col_idx_b:{col_format_b}}"
+        for col, r in combination:
+            col_idx, col_name, nr_cols = col
+            col_format_a = f"{len(str(int(nr_cols[0] * max_rank - 1))):02d}d"
+            col_format_b = f"{len(str(int(nr_cols[1] * max_rank - 1))):02d}d"
+            col_idx_a, col_idx_b = kronecker_indices(col_idx, nr_cols[0], nr_cols[1], sc, r, max_rank)
+            col_a = f"{col_name}{col_idx_a:{col_format_a}}"
+            col_b = f"{col_name}{col_idx_b:{col_format_b}}"
             products_a.append(col_a)
             products_b.append(col_b)
         terms_a.append(f"SUM({' * '.join(products_a)})")

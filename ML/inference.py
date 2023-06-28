@@ -3,10 +3,11 @@ import time
 import duckdb
 import numpy as np
 from sklearn import datasets
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from ML.calculate_kronecker import calculate_kronecker
-from ML.params import middle_layer
+from ML.calculate_kronecker import do_decomposition
+from ML.params import middle_layer, use_sigmoid, k
 from src.queries import kronecker_sum_product, kronecker_sum_product_separated
 
 
@@ -41,27 +42,39 @@ def insert_alt_pos(con: duckdb.DuckDBPyConnection, table: str, x: np.ndarray) ->
 
 
 def insert_krone(con: duckdb.DuckDBPyConnection, table_a: str, table_b: str, x: np.ndarray) -> tuple[str, str]:
-    a, b = calculate_kronecker(x, k=1)
-    con.execute(f"CREATE OR REPLACE TABLE {table_a} (row_id INTEGER, value DOUBLE)")
-    for i, val in enumerate(a[:, 0]):
-        con.execute(f"INSERT INTO {table_a} VALUES ({i + 1}, {val})")
-    con.execute(f"CREATE OR REPLACE TABLE {table_b} (row_id INTEGER, value DOUBLE)")
-    for i, val in enumerate(b[:, 0]):
-        con.execute(f"INSERT INTO {table_b} VALUES ({i + 1}, {val})")
+    a, b = do_decomposition(x, k=k)
+
+    cols_a = a.shape[1]
+    cols = ", ".join([f"value{j:{len(str(int(cols_a - 1))):02d}d} DOUBLE" for j in range(k)])
+    con.execute(f"CREATE OR REPLACE TABLE {table_a} (row_id INTEGER, {cols})")
+    for i, val in enumerate(a):
+        con.execute(f"INSERT INTO {table_a} VALUES ({i + 1}, {', '.join([str(v) for v in val])})")
+
+    cols_b = b.shape[1]
+    cols = ", ".join([f"value{j:{len(str(int(cols_b - 1))):02d}d} DOUBLE" for j in range(k)])
+    con.execute(f"CREATE OR REPLACE TABLE {table_b} (row_id INTEGER, {cols})")
+    for i, val in enumerate(b):
+        con.execute(f"INSERT INTO {table_b} VALUES ({i + 1}, {', '.join([str(v) for v in val])})")
 
     return table_a, table_b
 
 
 def insert_krone_alt_pos(con: duckdb.DuckDBPyConnection, table_a: str, table_b: str, x: np.ndarray) -> tuple[str, str]:
-    a, b = calculate_kronecker(x, k=1)
-    con.execute(f"CREATE OR REPLACE TABLE {table_a} (value DOUBLE)")
-    for val in a[:, 0]:
-        con.execute(f"INSERT INTO {table_a} VALUES ({val})")
-    con.execute(f"INSERT INTO {table_a} VALUES (1)")
-    con.execute(f"CREATE OR REPLACE TABLE {table_b} (value DOUBLE)")
-    for val in b[:, 0]:
-        con.execute(f"INSERT INTO {table_b} VALUES ({val})")
-    con.execute(f"INSERT INTO {table_b} VALUES (1)")
+    a, b = do_decomposition(x, k=k)
+
+    cols_a = a.shape[1]
+    cols = ", ".join([f"value{j:{len(str(int(cols_a - 1))):02d}d} DOUBLE" for j in range(k)])
+    con.execute(f"CREATE OR REPLACE TABLE {table_a} ({cols})")
+    for val in a:
+        con.execute(f"INSERT INTO {table_a} VALUES ({', '.join([str(v) for v in val])})")
+    con.execute(f"INSERT INTO {table_a} VALUES ({', '.join([str(1) for _ in range(k)])})")
+
+    cols_b = b.shape[1]
+    cols = ", ".join([f"value{j:{len(str(int(cols_b - 1))):02d}d} DOUBLE" for j in range(k)])
+    con.execute(f"CREATE OR REPLACE TABLE {table_b} ({cols})")
+    for val in b:
+        con.execute(f"INSERT INTO {table_b} VALUES ({', '.join([str(v) for v in val])})")
+    con.execute(f"INSERT INTO {table_b} VALUES ({', '.join([str(1) for _ in range(k)])})")
 
     return table_a, table_b
 
@@ -179,7 +192,8 @@ def linear_alt_pivot_pos(cols: int, z_relation: str, fc_relation: str) -> str:
 def linear_krone(cols: int, table_z_a: str, table_z_b: str, table_w_a: str, table_w_b: str, b_relation: str) -> str:
     terms = []
     for i in range(cols):
-        sum_product = kronecker_sum_product(["value", i], cols, 1)
+        sum_product = kronecker_sum_product([0, i], cols, 1, max_rank=k, rank_k=k, col_names=["value", f"column"],
+                                            col_numbers=[(1, 1), (cols, 1)])
         terms.append(f"SELECT {i + 1} AS row_id, {sum_product} AS value")
     query = f"""WITH
     A AS (
@@ -198,13 +212,15 @@ def linear_krone(cols: int, table_z_a: str, table_z_b: str, table_w_a: str, tabl
 
 
 def linear_krone_alt_pivot_pos(cols: int, table_z_a: str, table_z_b: str, table_fc_a: str, table_fc_b: str) -> str:
-    k = 1
     terms_a: list[str] = []
     terms_b: list[str] = []
     for i in range(cols):
-        sums_a, sums_b = kronecker_sum_product_separated(["value", i], cols, 1)
-        terms_a.append(*sums_a)
-        terms_b.append(*sums_b)
+        sums_a, sums_b = kronecker_sum_product_separated([0, i], cols, 1,
+                                                         max_rank=k, rank_k=k, col_names=["value", f"column"],
+                                                         col_numbers=[(1, 1), (cols, 1)])
+        # concat sums to terms
+        terms_a += sums_a
+        terms_b += sums_b
     query = f"""WITH
     A AS (
     SELECT * FROM {table_z_a} POSITIONAL JOIN {table_fc_a}
@@ -221,7 +237,7 @@ def linear_krone_alt_pivot_pos(cols: int, table_z_a: str, table_z_b: str, table_
     C AS (
     FROM (UNPIVOT A_sums ON COLUMNS(*) INTO NAME row_id_a VALUE value) a
     POSITIONAL JOIN (UNPIVOT B_sums ON COLUMNS(*) INTO NAME row_id_b VALUE value) b
-    SELECT (ROW_NUMBER() OVER () - 1) / {k} AS col_id, a.value * b.value AS value
+    SELECT FLOOR((ROW_NUMBER() OVER () - 1) / {k ** 2}) AS col_id, a.value * b.value AS value
     )
     SELECT SUM(value) AS value FROM C GROUP BY col_id
     """
@@ -232,8 +248,20 @@ def relu(h_relation: str) -> str:
     return f"SELECT row_id, CASE WHEN value < 0 THEN 0 ELSE value END AS value FROM {h_relation}"
 
 
+def sigmoid(h_relation: str) -> str:
+    return f"SELECT row_id, 1 / (1 + EXP(-value)) AS value FROM {h_relation}"
+
+
 def relu_positional(h_relation: str) -> str:
     return f"SELECT CASE WHEN value < 0 THEN 0 ELSE value END AS value FROM {h_relation}"
+
+
+def sigmoid_positional(h_relation: str) -> str:
+    return f"SELECT 1 / (1 + EXP(-value)) AS value FROM {h_relation}"
+
+
+activation = sigmoid if use_sigmoid else relu
+activation_positional = sigmoid_positional if use_sigmoid else relu_positional
 
 
 def softmax(h_relation: str) -> str:
@@ -251,21 +279,21 @@ def execute(con: duckdb.DuckDBPyConnection, table: str, query: str) -> str:
 
 
 def run_default(con: duckdb.DuckDBPyConnection,
-                insert: callable, linear: callable, relu: callable, softmax: callable,
+                insert: callable, linear: callable, activation: callable, softmax: callable, sample_x,
                 suffix: str = "") -> str:
     # Load the input
-    input = insert(con, f"input{suffix}", x)
+    input = insert(con, f"input{suffix}", sample_x)
 
     # Inference query
     # FC1
     h1 = execute(con, f"h1{suffix}",
                  linear(middle_layer[0], input, f"fc1_weight_4x{middle_layer[0]}", f"fc1_bias_{middle_layer[0]}x1"))
-    z1 = execute(con, f"z1{suffix}", relu(h1))
+    z1 = execute(con, f"z1{suffix}", activation(h1))
 
     # FC2
     h2 = execute(con, f"h2{suffix}", linear(middle_layer[1], z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}",
                                             f"fc2_bias_{middle_layer[1]}x1"))
-    z2 = execute(con, f"z2{suffix}", relu(h2))
+    z2 = execute(con, f"z2{suffix}", activation(h2))
 
     # FC3
     h3 = execute(con, f"h3{suffix}", linear(3, z2, f"fc3_weight_{middle_layer[1]}x3", f"fc3_bias_3x1"))
@@ -275,20 +303,20 @@ def run_default(con: duckdb.DuckDBPyConnection,
 
 
 def run_alt(con: duckdb.DuckDBPyConnection,
-            insert: callable, linear: callable, relu: callable, softmax: callable,
+            insert: callable, linear: callable, activation: callable, softmax: callable, sample_x,
             suffix: str = "") -> str:
     # Load the input
-    input = insert(con, f"input{suffix}", x)
+    input = insert(con, f"input{suffix}", sample_x)
 
     # Inference query
     # FC1
     h1 = execute(con, f"h1{suffix}",
                  linear(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
-    z1 = execute(con, f"z1{suffix}", relu(h1))
+    z1 = execute(con, f"z1{suffix}", activation(h1))
 
     # FC2
     h2 = execute(con, f"h2{suffix}", linear(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
-    z2 = execute(con, f"z2{suffix}", relu(h2))
+    z2 = execute(con, f"z2{suffix}", activation(h2))
 
     # FC3
     h3 = execute(con, f"h3{suffix}", linear(3, z2, f"fc3_{middle_layer[1]}x3"))
@@ -297,42 +325,43 @@ def run_alt(con: duckdb.DuckDBPyConnection,
     return z3
 
 
-def run_row_idx(con) -> str:
-    return run_default(con, insert, linear, relu, softmax)
+def run_row_idx(con, sample_x) -> str:
+    return run_default(con, insert, linear, activation, softmax, sample_x)
 
 
-def run_positional(con) -> str:
-    return run_default(con, insert_positional, linear_positional, relu_positional, softmax_positional, suffix="_pos")
+def run_positional(con, sample_x) -> str:
+    return run_default(con, insert_positional, linear_positional, activation_positional, softmax_positional, sample_x,
+                       suffix="_pos")
 
 
-def run_pivot_pos(con) -> str:
-    return run_default(con, insert_positional, linear_pivot_pos, relu_positional, softmax_positional,
+def run_pivot_pos(con, sample_x) -> str:
+    return run_default(con, insert_positional, linear_pivot_pos, activation_positional, softmax_positional, sample_x,
                        suffix="_pivot_pos")
 
 
-def run_alt_row_idx(con) -> str:
-    return run_alt(con, insert_alt, linear_alt, relu, softmax, suffix="_alt")
+def run_alt_row_idx(con, sample_x) -> str:
+    return run_alt(con, insert_alt, linear_alt, activation, softmax, sample_x, suffix="_alt")
 
 
-def run_alt_pivot(con) -> str:
-    return run_alt(con, insert_alt, linear_alt_pivot, relu, softmax, suffix="_alt_pivot")
+def run_alt_pivot(con, sample_x) -> str:
+    return run_alt(con, insert_alt, linear_alt_pivot, activation, softmax, sample_x, suffix="_alt_pivot")
 
 
-def run_alt_pivot_pos(con) -> str:
-    return run_alt(con, insert_alt_pos, linear_alt_pivot_pos, relu_positional, softmax_positional,
+def run_alt_pivot_pos(con, sample_x) -> str:
+    return run_alt(con, insert_alt_pos, linear_alt_pivot_pos, activation_positional, softmax_positional, sample_x,
                    suffix="_alt_pivot_pos")
 
 
-def run_krone(con):
+def run_krone(con, sample_x):
     # Load the input
-    input_a, input_b = insert_krone(con, "input_kron_a", "input_kron_b", x)
+    input_a, input_b = insert_krone(con, "input_kron_a", "input_kron_b", sample_x)
 
     # Inference query
     # FC1
     h1 = execute(con, "h1_kron",
                  linear_krone(middle_layer[0], input_a, input_b, f"fc1_weight_4x{middle_layer[0]}_a",
                               f"fc1_weight_4x{middle_layer[0]}_b", f"fc1_bias_{middle_layer[0]}x1"))
-    z1 = execute(con, "z1_kron", relu(h1))
+    z1 = execute(con, "z1_kron", activation(h1))
     z1_values = con.execute(f"SELECT value FROM {z1}").fetchall()
     z1_values = np.array(z1_values).reshape(middle_layer[0], 1)
     z1_a, z1_b = insert_krone(con, "z1_a", "z1_b", z1_values)
@@ -341,7 +370,7 @@ def run_krone(con):
     h2 = execute(con, "h2_kron",
                  linear_krone(middle_layer[1], z1_a, z1_b, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_a",
                               f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_b", f"fc2_bias_{middle_layer[1]}x1"))
-    z2 = execute(con, "z2_kron", relu(h2))
+    z2 = execute(con, "z2_kron", activation(h2))
     z2_values = con.execute(f"SELECT value FROM {z2}").fetchall()
     z2_values = np.array(z2_values).reshape(middle_layer[1], 1)
     z2_a, z2_b = insert_krone(con, "z2_a", "z2_b", z2_values)
@@ -355,16 +384,16 @@ def run_krone(con):
     return z3
 
 
-def run_krone_alt_pivot_pos(con):
+def run_krone_alt_pivot_pos(con, sample_x):
     # Load the input
-    input_a, input_b = insert_krone_alt_pos(con, "input_kron_alt_a", "input_kron_alt_b", x)
+    input_a, input_b = insert_krone_alt_pos(con, "input_kron_alt_a", "input_kron_alt_b", sample_x)
 
     # Inference query
     # FC1
     h1 = execute(con, "h1_kron_alt",
                  linear_krone_alt_pivot_pos(middle_layer[0], input_a, input_b,
-                                              f"fc1_4x{middle_layer[0]}_a", f"fc1_4x{middle_layer[0]}_b"))
-    z1 = execute(con, "z1_kron_alt", relu_positional(h1))
+                                            f"fc1_4x{middle_layer[0]}_a", f"fc1_4x{middle_layer[0]}_b"))
+    z1 = execute(con, "z1_kron_alt", activation_positional(h1))
     z1_values = con.execute(f"SELECT value FROM {z1}").fetchall()
     z1_values = np.array(z1_values).reshape(middle_layer[0], 1)
     z1_a, z1_b = insert_krone_alt_pos(con, "z1_a", "z1_b", z1_values)
@@ -372,9 +401,9 @@ def run_krone_alt_pivot_pos(con):
     # FC2
     h2 = execute(con, "h2_kron_alt",
                  linear_krone_alt_pivot_pos(middle_layer[1], z1_a, z1_b,
-                                              f"fc2_{middle_layer[0]}x{middle_layer[1]}_a",
-                                              f"fc2_{middle_layer[0]}x{middle_layer[1]}_b"))
-    z2 = execute(con, "z2_kron_alt", relu_positional(h2))
+                                            f"fc2_{middle_layer[0]}x{middle_layer[1]}_a",
+                                            f"fc2_{middle_layer[0]}x{middle_layer[1]}_b"))
+    z2 = execute(con, "z2_kron_alt", activation_positional(h2))
     z2_values = con.execute(f"SELECT value FROM {z2}").fetchall()
     z2_values = np.array(z2_values).reshape(middle_layer[1], 1)
     z2_a, z2_b = insert_krone_alt_pos(con, "z2_a", "z2_b", z2_values)
@@ -382,26 +411,35 @@ def run_krone_alt_pivot_pos(con):
     # FC3
     h3 = execute(con, "h3_kron_alt",
                  linear_krone_alt_pivot_pos(3, z2_a, z2_b,
-                                              f"fc3_{middle_layer[1]}x3_a", f"fc3_{middle_layer[1]}x3_b"))
+                                            f"fc3_{middle_layer[1]}x3_a", f"fc3_{middle_layer[1]}x3_b"))
     z3 = execute(con, "output_kron_alt", softmax_positional(h3))
 
     return z3
 
 
-def time_run(runner: callable, title: str):
+def time_run(runner: callable, title: str, sample_x, target_y):
     con = duckdb.connect(f'data/ml{middle_layer[0]}x{middle_layer[1]}.db', read_only=False)
     con.execute(f"PRAGMA max_expression_depth={np.max(middle_layer) * 10};")
-    _ = runner(con)
+    out_relation: str = runner(con, sample_x)
     print(title, flush=True)
     times = []
     for i in range(10):
         start = time.time()
-        _ = runner(con)
+        _ = runner(con, sample_x)
         s = time.time() - start
         times.append(s)
+
+    res: list[tuple[float]] = con.execute(f"SELECT value FROM {out_relation}").fetchall()
+    # flatten the list
+    res_list = [item for sublist in res for item in sublist]
+    # res_list[0] += 0.5
+    category = np.argmax(res_list)
     con.close()
+    print(f"Result: {res_list}", flush=True)
+    print(f"Category/Target: {category}/{target_y}", flush=True)
     print(f"Average: {np.mean(times) * 1000:.0f}ms", flush=True)
     print()
+    return category
 
 
 if __name__ == "__main__":
@@ -414,17 +452,27 @@ if __name__ == "__main__":
     scaler = StandardScaler()
     X = scaler.fit_transform(X)
 
-    # first input and target
-    x = X[0]
-    y_0 = y[0]
+    # Split the dataset into training and testing
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-    # time_run(run_row_idx, "Default")
-    # time_run(run_positional, "Default (with positional join)")
-    # time_run(run_pivot_pos, "Default (with pivot and positional join)")
-    # time_run(run_alt_row_idx, "Alternative")
-    # time_run(run_alt_pivot, "Alternative (with pivot)")
-    time_run(run_alt_pivot_pos, "Alternative (with pivot and positional join)")
-    # time_run(run_krone, "Kronecker")
-    time_run(run_krone_alt_pivot_pos, "Kronecker alternative (with pivot and positional join)")
+    # Take first sample as test
+    # X_test = X[0:1]
+    # y_test = y[0:1]
+
+    outputs = []
+    for x, y_0 in zip(X_test, y_test):
+        # time_run(run_row_idx, "Default")
+        # time_run(run_positional, "Default (with positional join)")
+        # time_run(run_pivot_pos, "Default (with pivot and positional join)")
+        # time_run(run_alt_row_idx, "Alternative")
+        # output = time_run(run_alt_pivot, "Alternative (with pivot)", x, y_0)
+        # output = time_run(run_alt_pivot_pos, "Alternative (with pivot and positional join)", x, y_0)
+        output = time_run(run_krone, "Kronecker", x, y_0)
+        # output = time_run(run_krone_alt_pivot_pos, "Kronecker alternative (with pivot and positional join)", x, y_0)
+        outputs.append(output)
+        time.sleep(1)
+
+    # Print the accuracy
+    print(f"Accuracy: {np.sum(np.array(outputs) == y_test) / len(y_test)}")
 
     print("Done!")

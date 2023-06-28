@@ -1,10 +1,10 @@
 import numpy as np
 
-from ML.params import middle_layer
+from ML.params import middle_layer, k
 from src.kronecker import svd, compute_shapes, kronecker_decomposition
 
 
-def calculate_kronecker(matrix, k=1, cc=False) -> tuple[np.ndarray, np.ndarray]:
+def do_decomposition(matrix, k=1, cc=False) -> tuple[np.ndarray, np.ndarray]:
     matrix = np.atleast_2d(matrix.T).T
     shape_c = matrix.shape
     shape_a, shape_b = compute_shapes(shape_c, compress_cols=cc)
@@ -13,7 +13,7 @@ def calculate_kronecker(matrix, k=1, cc=False) -> tuple[np.ndarray, np.ndarray]:
     return a, b
 
 
-if __name__ == '__main__':
+def calculate_kronecker():
     matrices = [f'fc1.weight_4x{middle_layer[0]}', f'fc1.bias_{middle_layer[0]}x1',
                 f'fc2.weight_{middle_layer[0]}x{middle_layer[1]}',
                 f'fc2.bias_{middle_layer[1]}x1', f'fc3.weight_{middle_layer[1]}x3', f'fc3.bias_3x1']
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     for matrix in matrices:
         filepath = f"data/{matrix}.csv"
         c = np.loadtxt(filepath, delimiter=',')
-        a, b = calculate_kronecker(c, k=1)
+        a, b = do_decomposition(c, k=k)
         np.savetxt(f"data/{matrix}_a.csv", a, delimiter=',')
         np.savetxt(f"data/{matrix}_b.csv", b, delimiter=',')
 
@@ -39,10 +39,14 @@ if __name__ == '__main__':
         bias = np.loadtxt(bias_file, delimiter=',')  # 1 x n
 
         combined = np.vstack((weights, bias))  # (m+1) x n
-        a, b = calculate_kronecker(combined, k=1)  # a: (m+1) x k, b: k x n
+        a, b = do_decomposition(combined, k=k)  # a: (m+1) x k, b: k x n
         a_file = f"data/{table_name}_a.csv"
         b_file = f"data/{table_name}_b.csv"
         np.savetxt(a_file, a, delimiter=',')
         np.savetxt(b_file, b, delimiter=',')
 
     print("Done!")
+
+
+if __name__ == "__main__":
+    calculate_kronecker()

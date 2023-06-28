@@ -71,9 +71,20 @@ def kronecker_decomposition(u_mat: np.ndarray, s_vec: np.ndarray, vh_mat: np.nda
     scales = np.sqrt(s_vec)
     u_mat_scaled = u_mat * scales
     v_mat_scaled = v_mat * scales
-    a_matrices = np.hstack([reshape(u_mat_scaled[:, i], shape_a) for i in range(k)])
-    b_matrices = np.hstack([reshape(v_mat_scaled[:, i], shape_b) for i in range(k)])
-    return a_matrices, b_matrices
+    a_matrices = []
+    b_matrices = []
+    for i in range(k):
+        if i < u_mat_scaled.shape[1]:
+            a_matrices.append(reshape(u_mat_scaled[:, i], shape_a))
+        else:
+            a_matrices.append(np.zeros(shape_a))
+
+        if i < v_mat_scaled.shape[1]:
+            b_matrices.append(reshape(v_mat_scaled[:, i], shape_b))
+        else:
+            b_matrices.append(np.zeros(shape_b))
+
+    return np.hstack(a_matrices), np.hstack(b_matrices)
 
 
 def svd(matrix: np.ndarray, shape_a: tuple[int, int]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:

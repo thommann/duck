@@ -3,9 +3,9 @@ import torch
 from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
 
-from ML.calculate_kronecker import calculate_kronecker
+from ML.calculate_kronecker import do_decomposition
 from ML.model import KroneNet
-from ML.params import middle_layer
+from ML.params import middle_layer, middle_layer_a, middle_layer_b
 
 iris = datasets.load_iris()
 X = iris.data
@@ -23,7 +23,7 @@ y = torch.tensor(y, dtype=torch.long)
 state_dict = torch.load(f'data/iris-model{middle_layer[0]}x{middle_layer[1]}.pth')
 krone_state_dict = {}
 for key, value in state_dict.items():
-    value_a, value_b = calculate_kronecker(value.numpy(), cc=True)
+    value_a, value_b = do_decomposition(value.numpy(), cc=True)
     print(key, value_a.shape, value_b.shape)
     tensor_a, tensor_b = torch.tensor(value_a), torch.tensor(value_b)
     # Squeeze the tensors if it is a bias
@@ -33,8 +33,6 @@ for key, value in state_dict.items():
     krone_state_dict[key + "_a"] = tensor_a
     krone_state_dict[key + "_b"] = tensor_b
 
-middle_layer_a = [10, 5]  # 100 x 50
-middle_layer_b = [10, 10]  # 100 x 50
 model = KroneNet(middle_layer_a, middle_layer_b)
 model.load_state_dict(krone_state_dict)
 
