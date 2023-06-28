@@ -25,26 +25,6 @@ def calculate_kronecker():
         np.savetxt(f"data/{matrix}_a.csv", a, delimiter=',')
         np.savetxt(f"data/{matrix}_b.csv", b, delimiter=',')
 
-    layers = [[f'fc1.weight_4x{middle_layer[0]}', f'fc1.bias_1x{middle_layer[0]}'],
-              [f'fc2.weight_{middle_layer[0]}x{middle_layer[1]}', f'fc2.bias_1x{middle_layer[1]}'],
-              [f'fc3.weight_{middle_layer[1]}x3', f'fc3.bias_1x3']]
-
-    for layer in layers:
-        table_name = layer[0].replace(".weight", "")
-        weights_file = f"data/{layer[0]}.csv"
-        bias_file = f"data/{layer[1]}.csv"
-
-        # Konecker decomposition
-        weights = np.loadtxt(weights_file, delimiter=',')  # m x n
-        bias = np.loadtxt(bias_file, delimiter=',')  # 1 x n
-
-        combined = np.vstack((weights, bias))  # (m+1) x n
-        a, b = do_decomposition(combined, k=k)  # a: (m+1) x k, b: k x n
-        a_file = f"data/{table_name}_a.csv"
-        b_file = f"data/{table_name}_b.csv"
-        np.savetxt(a_file, a, delimiter=',')
-        np.savetxt(b_file, b, delimiter=',')
-
     print("Done!")
 
 

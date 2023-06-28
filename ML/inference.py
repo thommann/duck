@@ -59,7 +59,7 @@ def insert_krone(con: duckdb.DuckDBPyConnection, table_a: str, table_b: str, x: 
     return table_a, table_b
 
 
-def insert_krone_alt_pos(con: duckdb.DuckDBPyConnection, table_a: str, table_b: str, x: np.ndarray) -> tuple[str, str]:
+def insert_krone_pos(con: duckdb.DuckDBPyConnection, table_a: str, table_b: str, x: np.ndarray) -> tuple[str, str]:
     a, b = do_decomposition(x, k=k)
 
     cols_a = a.shape[1]
@@ -67,14 +67,12 @@ def insert_krone_alt_pos(con: duckdb.DuckDBPyConnection, table_a: str, table_b: 
     con.execute(f"CREATE OR REPLACE TABLE {table_a} ({cols})")
     for val in a:
         con.execute(f"INSERT INTO {table_a} VALUES ({', '.join([str(v) for v in val])})")
-    con.execute(f"INSERT INTO {table_a} VALUES ({', '.join([str(1) for _ in range(k)])})")
 
     cols_b = b.shape[1]
     cols = ", ".join([f"value{j:{len(str(int(cols_b - 1))):02d}d} DOUBLE" for j in range(k)])
     con.execute(f"CREATE OR REPLACE TABLE {table_b} ({cols})")
     for val in b:
         con.execute(f"INSERT INTO {table_b} VALUES ({', '.join([str(v) for v in val])})")
-    con.execute(f"INSERT INTO {table_b} VALUES ({', '.join([str(1) for _ in range(k)])})")
 
     return table_a, table_b
 
@@ -211,7 +209,8 @@ def linear_krone(cols: int, table_z_a: str, table_z_b: str, table_w_a: str, tabl
     return query
 
 
-def linear_krone_alt_pivot_pos(cols: int, table_z_a: str, table_z_b: str, table_fc_a: str, table_fc_b: str) -> str:
+def linear_krone_pivot_pos(cols: int, table_z_a: str, table_z_b: str, table_w_a: str, table_w_b: str,
+                           b_relation: str) -> str:
     terms_a: list[str] = []
     terms_b: list[str] = []
     for i in range(cols):
@@ -223,10 +222,10 @@ def linear_krone_alt_pivot_pos(cols: int, table_z_a: str, table_z_b: str, table_
         terms_b += sums_b
     query = f"""WITH
     A AS (
-    SELECT * FROM {table_z_a} POSITIONAL JOIN {table_fc_a}
+    SELECT * FROM {table_z_a} POSITIONAL JOIN {table_w_a}
     ),
     B AS (
-    SELECT * FROM {table_z_b} POSITIONAL JOIN {table_fc_b}
+    SELECT * FROM {table_z_b} POSITIONAL JOIN {table_w_b}
     ),
     A_sums AS (
     SELECT {', '.join(terms_a)} FROM A
@@ -238,8 +237,12 @@ def linear_krone_alt_pivot_pos(cols: int, table_z_a: str, table_z_b: str, table_
     FROM (UNPIVOT A_sums ON COLUMNS(*) INTO NAME row_id_a VALUE value) a
     POSITIONAL JOIN (UNPIVOT B_sums ON COLUMNS(*) INTO NAME row_id_b VALUE value) b
     SELECT FLOOR((ROW_NUMBER() OVER () - 1) / {k ** 2}) AS col_id, a.value * b.value AS value
+    ),
+    C_sums AS (
+        SELECT SUM(value) AS value FROM C GROUP BY col_id ORDER BY col_id
     )
-    SELECT SUM(value) AS value FROM C GROUP BY col_id
+    SELECT value + b.column0 AS value
+    FROM C_sums POSITIONAL JOIN {b_relation} b
     """
     return query
 
@@ -352,69 +355,46 @@ def run_alt_pivot_pos(con, sample_x) -> str:
                    suffix="_alt_pivot_pos")
 
 
-def run_krone(con, sample_x):
+def run_krone(con, insert: callable, linear: callable, activation: callable, softmax: callable, sample_x,
+              suffix="") -> str:
     # Load the input
-    input_a, input_b = insert_krone(con, "input_kron_a", "input_kron_b", sample_x)
+    input_a, input_b = insert(con, f"input_kron{suffix}_a", f"input_kron{suffix}_b", sample_x)
 
     # Inference query
     # FC1
-    h1 = execute(con, "h1_kron",
-                 linear_krone(middle_layer[0], input_a, input_b, f"fc1_weight_4x{middle_layer[0]}_a",
-                              f"fc1_weight_4x{middle_layer[0]}_b", f"fc1_bias_{middle_layer[0]}x1"))
-    z1 = execute(con, "z1_kron", activation(h1))
+    h1 = execute(con, f"h1_kron{suffix}",
+                 linear(middle_layer[0], input_a, input_b, f"fc1_weight_4x{middle_layer[0]}_a",
+                        f"fc1_weight_4x{middle_layer[0]}_b", f"fc1_bias_{middle_layer[0]}x1"))
+    z1 = execute(con, f"z1_kron{suffix}", activation(h1))
     z1_values = con.execute(f"SELECT value FROM {z1}").fetchall()
     z1_values = np.array(z1_values).reshape(middle_layer[0], 1)
-    z1_a, z1_b = insert_krone(con, "z1_a", "z1_b", z1_values)
+    z1_a, z1_b = insert(con, f"z1{suffix}_a", f"z1{suffix}_b", z1_values)
 
     # FC2
-    h2 = execute(con, "h2_kron",
-                 linear_krone(middle_layer[1], z1_a, z1_b, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_a",
-                              f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_b", f"fc2_bias_{middle_layer[1]}x1"))
-    z2 = execute(con, "z2_kron", activation(h2))
+    h2 = execute(con, f"h2_kron{suffix}",
+                 linear(middle_layer[1], z1_a, z1_b, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_a",
+                        f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_b", f"fc2_bias_{middle_layer[1]}x1"))
+    z2 = execute(con, f"z2_kron{suffix}", activation(h2))
     z2_values = con.execute(f"SELECT value FROM {z2}").fetchall()
     z2_values = np.array(z2_values).reshape(middle_layer[1], 1)
-    z2_a, z2_b = insert_krone(con, "z2_a", "z2_b", z2_values)
+    z2_a, z2_b = insert(con, f"z2{suffix}_a", f"z2{suffix}_b", z2_values)
 
     # FC3
-    h3 = execute(con, "h3_kron",
-                 linear_krone(3, z2_a, z2_b, f"fc3_weight_{middle_layer[1]}x3_a", f"fc3_weight_{middle_layer[1]}x3_b",
-                              f"fc3_bias_3x1"))
-    z3 = execute(con, "output_kron", softmax(h3))
+    h3 = execute(con, f"h3_kron{suffix}",
+                 linear(3, z2_a, z2_b, f"fc3_weight_{middle_layer[1]}x3_a", f"fc3_weight_{middle_layer[1]}x3_b",
+                        f"fc3_bias_3x1"))
+    z3 = execute(con, f"output_kron{suffix}", softmax(h3))
 
     return z3
 
 
-def run_krone_alt_pivot_pos(con, sample_x):
-    # Load the input
-    input_a, input_b = insert_krone_alt_pos(con, "input_kron_alt_a", "input_kron_alt_b", sample_x)
+def run_krone_row_idx(con, sample_x):
+    return run_krone(con, insert_krone, linear_krone, activation, softmax, sample_x)
 
-    # Inference query
-    # FC1
-    h1 = execute(con, "h1_kron_alt",
-                 linear_krone_alt_pivot_pos(middle_layer[0], input_a, input_b,
-                                            f"fc1_4x{middle_layer[0]}_a", f"fc1_4x{middle_layer[0]}_b"))
-    z1 = execute(con, "z1_kron_alt", activation_positional(h1))
-    z1_values = con.execute(f"SELECT value FROM {z1}").fetchall()
-    z1_values = np.array(z1_values).reshape(middle_layer[0], 1)
-    z1_a, z1_b = insert_krone_alt_pos(con, "z1_a", "z1_b", z1_values)
 
-    # FC2
-    h2 = execute(con, "h2_kron_alt",
-                 linear_krone_alt_pivot_pos(middle_layer[1], z1_a, z1_b,
-                                            f"fc2_{middle_layer[0]}x{middle_layer[1]}_a",
-                                            f"fc2_{middle_layer[0]}x{middle_layer[1]}_b"))
-    z2 = execute(con, "z2_kron_alt", activation_positional(h2))
-    z2_values = con.execute(f"SELECT value FROM {z2}").fetchall()
-    z2_values = np.array(z2_values).reshape(middle_layer[1], 1)
-    z2_a, z2_b = insert_krone_alt_pos(con, "z2_a", "z2_b", z2_values)
-
-    # FC3
-    h3 = execute(con, "h3_kron_alt",
-                 linear_krone_alt_pivot_pos(3, z2_a, z2_b,
-                                            f"fc3_{middle_layer[1]}x3_a", f"fc3_{middle_layer[1]}x3_b"))
-    z3 = execute(con, "output_kron_alt", softmax_positional(h3))
-
-    return z3
+def run_krone_pivot_pos(con, sample_x):
+    return run_krone(con, insert_krone_pos, linear_krone_pivot_pos, activation_positional, softmax_positional, sample_x,
+                     suffix="_pivot_pos")
 
 
 def time_run(runner: callable, title: str, sample_x, target_y):
@@ -453,11 +433,11 @@ if __name__ == "__main__":
     X = scaler.fit_transform(X)
 
     # Split the dataset into training and testing
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
     # Take first sample as test
-    # X_test = X[0:1]
-    # y_test = y[0:1]
+    X_test = X[0:1]
+    y_test = y[0:1]
 
     outputs = []
     for x, y_0 in zip(X_test, y_test):
@@ -467,8 +447,8 @@ if __name__ == "__main__":
         # time_run(run_alt_row_idx, "Alternative")
         # output = time_run(run_alt_pivot, "Alternative (with pivot)", x, y_0)
         # output = time_run(run_alt_pivot_pos, "Alternative (with pivot and positional join)", x, y_0)
-        output = time_run(run_krone, "Kronecker", x, y_0)
-        # output = time_run(run_krone_alt_pivot_pos, "Kronecker alternative (with pivot and positional join)", x, y_0)
+        output = time_run(run_krone_row_idx, "Kronecker", x, y_0)
+        output = time_run(run_krone_pivot_pos, "Kronecker alternative (with pivot and positional join)", x, y_0)
         outputs.append(output)
         time.sleep(1)
 
