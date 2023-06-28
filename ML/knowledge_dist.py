@@ -84,7 +84,7 @@ for epoch in range(10_000):
     loss = criterion(output, y_train)
     loss.backward()
     optimizer.step()
-    if epoch % 50 == 0:
+    if epoch % 100 == 0:
         print(f"Epoch {epoch} loss: {loss.item()}")
     if loss.item() < 0.6:
         break

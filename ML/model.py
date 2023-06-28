@@ -74,12 +74,20 @@ class KroneSoftmax(nn.Module):
         x_b = x_b[:, :self.in_features_b]
         x_a = x_a[:, :self.in_features_a]
 
-        # Compute kronecker product for each sample
-        y = torch.zeros(x_a.shape[0], self.in_features_a * self.in_features_b)
-        for i in range(x_a.shape[0]):
-            y[i] = torch.kron(x_a[i], x_b[i])
+        # Expand dimensions to perform broadcasting
+        x_a_expanded = x_a[:, :, None, None]
+        x_b_expanded = x_b[:, None, :, None]
 
+        # Compute the Kronecker product for all samples (batch-wise) using broadcasting
+        y = x_a_expanded * x_b_expanded
+
+        # Reshape to final form
+        batch_size = y.shape[0]
+        y = y.reshape(batch_size, self.in_features_a * self.in_features_b)
+
+        # Apply softmax
         y = torch.softmax(y, dim=1)
+
         return y
 
 
