@@ -14,16 +14,22 @@ def do_decomposition(matrix, k=1, cc=False) -> tuple[np.ndarray, np.ndarray]:
 
 
 def calculate_kronecker():
-    matrices = [f'fc1.weight_4x{middle_layer[0]}', f'fc1.bias_{middle_layer[0]}x1',
-                f'fc2.weight_{middle_layer[0]}x{middle_layer[1]}',
-                f'fc2.bias_{middle_layer[1]}x1', f'fc3.weight_{middle_layer[1]}x3', f'fc3.bias_3x1']
+    weight_matrices = [f'fc1.weight_4x{middle_layer[0]}',
+                       f'fc2.weight_{middle_layer[0]}x{middle_layer[1]}',
+                       f'fc3.weight_{middle_layer[1]}x3']
 
-    for matrix in matrices:
+    for matrix in weight_matrices:
         filepath = f"data/{matrix}.csv"
         c = np.loadtxt(filepath, delimiter=',')
         a, b = do_decomposition(c, k=k)
         np.savetxt(f"data/{matrix}_a.csv", a, delimiter=',')
         np.savetxt(f"data/{matrix}_b.csv", b, delimiter=',')
+
+        a_cc, b_cc = do_decomposition(c, k=1, cc=True)
+        a_cc_T = a_cc.T
+        b_cc_T = b_cc.T
+        np.savetxt(f"data/{matrix}_a_T.csv", a_cc_T, delimiter=',')
+        np.savetxt(f"data/{matrix}_b_T.csv", b_cc_T, delimiter=',')
 
     print("Done!")
 

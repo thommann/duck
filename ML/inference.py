@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 from ML.calculate_kronecker import do_decomposition
-from ML.params import middle_layer, use_sigmoid, k
+from ML.params import middle_layer, use_sigmoid, k, shape_a1, shape_a2, shape_a3, shape_b1, shape_b2, shape_b3
 from src.queries import kronecker_sum_product, kronecker_sum_product_separated
 
 
@@ -112,25 +112,21 @@ def linear_positional(cols: int, z_relation: str, w_relation: str, b_relation: s
 
 
 def linear_pivot_pos(cols: int, z_relation: str, w_relation: str, b_relation: str) -> str:
+    terms = []
+    for i in range(cols):
+        terms.append(f"SUM(c.value * c.column{i:{len(str(int(cols - 1))):02d}d})")
     query = f"""WITH
     combo AS (
     SELECT * FROM {z_relation} POSITIONAL JOIN {w_relation}
     ),
     A AS (
-    SELECT """
-    terms = []
-    for i in range(cols):
-        terms.append(f"SUM(c.value * c.column{i:{len(str(int(cols - 1))):02d}d})")
-    query += " , ".join(terms)
-    query += """
-    FROM combo c
+    SELECT {' , '.join(terms)} FROM combo c
     ),
     aT AS (
     UNPIVOT A ON COLUMNS(*) INTO NAME row_id VALUE value
     )
+    SELECT value + column0 AS value FROM aT POSITIONAL JOIN {b_relation}
     """
-
-    query += f"SELECT value + column0 AS value FROM aT POSITIONAL JOIN {b_relation}"
     return query
 
 
@@ -244,6 +240,56 @@ def linear_krone_pivot_pos(cols: int, table_z_a: str, table_z_b: str, table_w_a:
     SELECT value + b.column0 AS value
     FROM C_sums POSITIONAL JOIN {b_relation} b
     """
+    return query
+
+
+def linear_krone_bert(shape_a: tuple[int, int], shape_b: tuple[int, int], table_z: str, table_w_a: str, table_w_b: str,
+                      b_relation: str) -> str:
+    x_terms = []
+    for i in range(shape_a[1]):
+        x_terms.append(f"MAX(CASE WHEN col_id = {i} THEN value END) AS column{i}")
+
+    rows_bxt = []
+    for row in range(shape_a[1]):
+        cols_bxt = []
+        for col in range(shape_b[0]):
+            cols_bxt.append(f"SUM(column{col} * value{row}) AS value{col}")
+
+        rows_bxt.append(f"SELECT {', '.join(cols_bxt)} FROM B")
+
+    cols_bxa_v = []
+    for col in range(shape_a[0]):
+        rows_bxa_v = []
+        for row in range(shape_b[0]):
+            rows_bxa_v.append(f"SUM(value{row} * column{col})")
+        cols_bxa_v += rows_bxa_v
+
+    query = f"""WITH
+    X AS (
+        SELECT FLOOR((ROW_NUMBER() OVER () - 1) / {shape_a[1]}) AS col_id, value AS value FROM {table_z}
+    ),
+    VX AS (
+        SELECT {', '.join(x_terms)} FROM X
+    ),
+    B AS (
+    SELECT * FROM {table_w_b} POSITIONAL JOIN VX
+    ),
+    BXT AS (
+    {' UNION ALL '.join(rows_bxt)}
+    ),
+    A AS (
+    SELECT * FROM BXT POSITIONAL JOIN {table_w_a}
+    ),
+    BXA AS (
+    SELECT {', '.join(cols_bxa_v)} FROM A
+    ),
+    Z AS (
+    UNPIVOT BXA ON COLUMNS(*) INTO NAME row_id VALUE value
+    )
+    SELECT value + b.column0 AS value
+    FROM Z POSITIONAL JOIN {b_relation} b
+    """
+    print(query)
     return query
 
 
@@ -397,6 +443,33 @@ def run_krone_pivot_pos(con, sample_x):
                      suffix="_pivot_pos")
 
 
+def run_krone_bert(con, sample_x):
+    # Load the input
+    input_x = insert_positional(con, f"input_krone_bert", sample_x)
+
+    # Inference query
+    # FC1
+    h1 = execute(con, f"h1_krone_bert",
+                 linear_krone_bert(shape_a1, shape_b1, input_x, f"fc1_weight_4x{middle_layer[0]}_a_T",
+                                   f"fc1_weight_4x{middle_layer[0]}_b_T", f"fc1_bias_{middle_layer[0]}x1"))
+    z1 = execute(con, f"z1_krone_bert", activation(h1))
+
+    # FC2
+    h2 = execute(con, f"h2_krone_bert",
+                 linear_krone_bert(shape_a2, shape_b2, z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_a_T",
+                                   f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_b_T",
+                                   f"fc2_bias_{middle_layer[1]}x1"))
+    z2 = execute(con, f"z2_krone_bert", activation(h2))
+
+    # FC3
+    h3 = execute(con, f"h3_krone_bert",
+                 linear_krone_bert(shape_a3, shape_b3, z2, f"fc3_weight_{middle_layer[1]}x3_a_T",
+                                   f"fc3_weight_{middle_layer[1]}x3_b_T", f"fc3_bias_3x1"))
+    z3 = execute(con, f"output_krone_bert", softmax(h3))
+
+    return z3
+
+
 def time_run(runner: callable, title: str, sample_x, target_y):
     con = duckdb.connect(f'data/ml{middle_layer[0]}x{middle_layer[1]}.db', read_only=False)
     con.execute(f"PRAGMA max_expression_depth={np.max(middle_layer) * 10};")
@@ -447,8 +520,9 @@ if __name__ == "__main__":
         # time_run(run_alt_row_idx, "Alternative")
         # output = time_run(run_alt_pivot, "Alternative (with pivot)", x, y_0)
         # output = time_run(run_alt_pivot_pos, "Alternative (with pivot and positional join)", x, y_0)
-        output = time_run(run_krone_row_idx, "Kronecker", x, y_0)
-        output = time_run(run_krone_pivot_pos, "Kronecker alternative (with pivot and positional join)", x, y_0)
+        # output = time_run(run_krone_row_idx, "Kronecker", x, y_0)
+        # output = time_run(run_krone_pivot_pos, "Kronecker alternative (with pivot and positional join)", x, y_0)
+        output = time_run(run_krone_bert, "Kronecker BERT", x, y_0)
         outputs.append(output)
         time.sleep(1)
 
