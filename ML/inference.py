@@ -247,7 +247,7 @@ def linear_krone_bert(shape_a: tuple[int, int], shape_b: tuple[int, int], table_
                       b_relation: str) -> str:
     x_terms = []
     for i in range(shape_a[1]):
-        x_terms.append(f"MAX(CASE WHEN col_id = {i} THEN value END) AS column{i}")
+        x_terms.append(f"MAX(CASE WHEN col_id = {i} THEN value END) AS value{i}")
 
     rows_bxt = []
     for row in range(shape_a[1]):
@@ -452,20 +452,20 @@ def run_krone_bert(con, sample_x):
     h1 = execute(con, f"h1_krone_bert",
                  linear_krone_bert(shape_a1, shape_b1, input_x, f"fc1_weight_4x{middle_layer[0]}_a_T",
                                    f"fc1_weight_4x{middle_layer[0]}_b_T", f"fc1_bias_{middle_layer[0]}x1"))
-    z1 = execute(con, f"z1_krone_bert", activation(h1))
+    z1 = execute(con, f"z1_krone_bert", activation_positional(h1))
 
     # FC2
     h2 = execute(con, f"h2_krone_bert",
                  linear_krone_bert(shape_a2, shape_b2, z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_a_T",
                                    f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_b_T",
                                    f"fc2_bias_{middle_layer[1]}x1"))
-    z2 = execute(con, f"z2_krone_bert", activation(h2))
+    z2 = execute(con, f"z2_krone_bert", activation_positional(h2))
 
     # FC3
     h3 = execute(con, f"h3_krone_bert",
                  linear_krone_bert(shape_a3, shape_b3, z2, f"fc3_weight_{middle_layer[1]}x3_a_T",
                                    f"fc3_weight_{middle_layer[1]}x3_b_T", f"fc3_bias_3x1"))
-    z3 = execute(con, f"output_krone_bert", softmax(h3))
+    z3 = execute(con, f"output_krone_bert", softmax_positional(h3))
 
     return z3
 
