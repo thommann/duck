@@ -5,11 +5,11 @@ from sklearn.preprocessing import StandardScaler
 from torch import nn
 from torch import optim
 
-from ML.model import Net
+from ML.model import IrisNet
 from ML.params import middle_layer, use_sigmoid
 
 
-def test(model: Net, x: torch.Tensor, y: torch.Tensor) -> None:
+def test(model: IrisNet, x: torch.Tensor, y: torch.Tensor) -> None:
     # Test the model
     model.eval()
     with torch.no_grad():
@@ -44,7 +44,7 @@ X = torch.tensor(X, dtype=torch.float)
 y = torch.tensor(y, dtype=torch.long)
 
 # Define the model
-model = Net(middle_layer, sigmoid=use_sigmoid)
+model = IrisNet(middle_layer, sigmoid=use_sigmoid)
 
 # Define loss function and optimizer
 criterion = nn.CrossEntropyLoss()
@@ -58,9 +58,9 @@ for epoch in range(10_000):
     loss.backward()
     optimizer.step()
 
-    if epoch % 50 == 0:
+    if epoch % 100 == 0:
         print(f"Epoch: {epoch}, Loss: {loss.item()}")
-    if loss.item() < 0.5:
+    if loss.item() < 0.6:
         break
 
 # Test the model

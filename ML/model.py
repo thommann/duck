@@ -2,12 +2,30 @@ import torch
 from torch import nn
 
 
-class Net(nn.Module):
+class IrisNet(nn.Module):
     def __init__(self, middle_layer, sigmoid=False):
-        super(Net, self).__init__()
+        super(IrisNet, self).__init__()
         self.fc1 = nn.Linear(4, middle_layer[0])
         self.fc2 = nn.Linear(middle_layer[0], middle_layer[1])
         self.fc3 = nn.Linear(middle_layer[1], 3)
+        self.activation = torch.sigmoid if sigmoid else torch.relu
+
+    def forward(self, x):
+        h1 = self.fc1(x)
+        z1 = self.activation(h1)
+        h2 = self.fc2(z1)
+        z2 = self.activation(h2)
+        h3 = self.fc3(z2)
+        y = torch.softmax(h3, dim=1)
+        return y
+
+
+class MnistNet(nn.Module):
+    def __init__(self, middle_layer, sigmoid=False):
+        super(MnistNet, self).__init__()
+        self.fc1 = nn.Linear(28 * 28, middle_layer[0])
+        self.fc2 = nn.Linear(middle_layer[0], middle_layer[1])
+        self.fc3 = nn.Linear(middle_layer[1], 10)
         self.activation = torch.sigmoid if sigmoid else torch.relu
 
     def forward(self, x):
