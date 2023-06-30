@@ -33,8 +33,8 @@ def main():
     trainset = datasets.MNIST('~/.pytorch/MNIST_data/', download=True, train=True, transform=transform)
     testset = datasets.MNIST('~/.pytorch/MNIST_data/', download=True, train=False, transform=transform)
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=512, shuffle=True, num_workers=4)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=512, shuffle=True, num_workers=4)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=512, shuffle=True, num_workers=8)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=512, shuffle=True, num_workers=8)
 
     # Define the model
     model = MnistNet(middle_layer, sigmoid=use_sigmoid).to(device)
@@ -44,7 +44,7 @@ def main():
     optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
 
     # Train the model
-    for epoch in range(50):
+    for epoch in range(100):
         running_loss = 0
         for images, labels in trainloader:
             images = images.view(images.shape[0], -1)  # flattening the image here
