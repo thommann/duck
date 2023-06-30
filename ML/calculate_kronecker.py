@@ -26,10 +26,8 @@ def calculate_kronecker():
         np.savetxt(f"data/{matrix}_b.csv", b, delimiter=',')
 
         a_cc, b_cc = do_decomposition(c, k=1, cc=True)
-        a_cc_T = a_cc  # TODO: why no T?
-        b_cc_T = b_cc  # TODO: why no T?
-        np.savetxt(f"data/{matrix}_a_T.csv", a_cc_T, delimiter=',')
-        np.savetxt(f"data/{matrix}_b_T.csv", b_cc_T, delimiter=',')
+        np.savetxt(f"data/{matrix}_a_T.csv", a_cc, delimiter=',')
+        np.savetxt(f"data/{matrix}_b_T.csv", b_cc, delimiter=',')
 
     print("Done!")
 
