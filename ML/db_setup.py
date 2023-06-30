@@ -20,14 +20,7 @@ def setup_db():
                      f'fc3.weight_{middle_layer[1]}x3_a',
                      f'fc3.weight_{middle_layer[1]}x3_b']
 
-    kron_bert_matrices = [f'fc1.weight_4x{middle_layer[0]}_a_T',
-                          f'fc1.weight_4x{middle_layer[0]}_b_T',
-                          f'fc2.weight_{middle_layer[0]}x{middle_layer[1]}_a_T',
-                          f'fc2.weight_{middle_layer[0]}x{middle_layer[1]}_b_T',
-                          f'fc3.weight_{middle_layer[1]}x3_a_T',
-                          f'fc3.weight_{middle_layer[1]}x3_b_T']
-
-    matrices += kron_matrices + kron_bert_matrices
+    matrices += kron_matrices
 
     con = duckdb.connect(f'data/ml{middle_layer[0]}x{middle_layer[1]}.db', read_only=False)
     for matrix in matrices:

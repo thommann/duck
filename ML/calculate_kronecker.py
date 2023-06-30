@@ -1,6 +1,6 @@
 import numpy as np
 
-from ML.params import middle_layer, k
+from ML.params import middle_layer, max_k
 from src.kronecker import svd, compute_shapes, kronecker_decomposition
 
 
@@ -21,13 +21,9 @@ def calculate_kronecker():
     for matrix in weight_matrices:
         filepath = f"data/{matrix}.csv"
         c = np.loadtxt(filepath, delimiter=',')
-        a, b = do_decomposition(c, k=k)
+        a, b = do_decomposition(c, k=max_k)
         np.savetxt(f"data/{matrix}_a.csv", a, delimiter=',')
         np.savetxt(f"data/{matrix}_b.csv", b, delimiter=',')
-
-        a_cc, b_cc = do_decomposition(c, k=1, cc=True)
-        np.savetxt(f"data/{matrix}_a_T.csv", a_cc, delimiter=',')
-        np.savetxt(f"data/{matrix}_b_T.csv", b_cc, delimiter=',')
 
     print("Done!")
 

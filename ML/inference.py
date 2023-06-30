@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 from ML.calculate_kronecker import do_decomposition
-from ML.params import middle_layer, use_sigmoid, k, shape_a1, shape_a2, shape_a3, shape_b1, shape_b2, shape_b3
+from ML.params import middle_layer, use_sigmoid, k, shape_a1, shape_a2, shape_a3, shape_b1, shape_b2, shape_b3, max_k
 from src.queries import kronecker_sum_product, kronecker_sum_product_separated
 
 
@@ -186,7 +186,7 @@ def linear_alt_pivot_pos(cols: int, z_relation: str, fc_relation: str) -> str:
 def linear_krone(cols: int, table_z_a: str, table_z_b: str, table_w_a: str, table_w_b: str, b_relation: str) -> str:
     terms = []
     for i in range(cols):
-        sum_product = kronecker_sum_product([0, i], cols, 1, max_rank=k, rank_k=k, col_names=["value", f"column"],
+        sum_product = kronecker_sum_product([0, i], cols, 1, max_rank=max_k, rank_k=k, col_names=["value", f"column"],
                                             col_numbers=[(1, 1), (cols, 1)])
         terms.append(f"SELECT {i + 1} AS row_id, {sum_product} AS value")
     query = f"""WITH
@@ -211,7 +211,7 @@ def linear_krone_pivot_pos(cols: int, table_z_a: str, table_z_b: str, table_w_a:
     terms_b: list[str] = []
     for i in range(cols):
         sums_a, sums_b = kronecker_sum_product_separated([0, i], cols, 1,
-                                                         max_rank=k, rank_k=k, col_names=["value", f"column"],
+                                                         max_rank=max_k, rank_k=k, col_names=["value", f"column"],
                                                          col_numbers=[(1, 1), (cols, 1)])
         # concat sums to terms
         terms_a += sums_a
@@ -245,7 +245,6 @@ def linear_krone_pivot_pos(cols: int, table_z_a: str, table_z_b: str, table_w_a:
 
 def linear_krone_bert(shape_a: tuple[int, int], shape_b: tuple[int, int], table_z: str, table_w_a: str, table_w_b: str,
                       b_relation: str) -> str:
-    local_k = 1
     vx_terms = []
     for i in range(shape_a[1]):
         vx_terms.append(f"CASE WHEN col_id = {i} THEN value END AS value{i}")
@@ -253,21 +252,6 @@ def linear_krone_bert(shape_a: tuple[int, int], shape_b: tuple[int, int], table_
     vxx_terms = []
     for i in range(shape_a[1]):
         vxx_terms.append(f"(SELECT value{i} FROM VX WHERE value{i} IS NOT NULL)")
-
-    rows_bxt = []
-    for row in range(shape_a[1]):
-        cols_bxt = []
-        for col in range(shape_b[0]):
-            cols_bxt.append(f"SUM(column{col} * value{row}) AS value{col}")
-
-        rows_bxt.append(f"SELECT {', '.join(cols_bxt)} FROM B")
-
-    cols_bxa_v = []
-    for col in range(shape_a[0]):
-        rows_bxa_v = []
-        for row in range(shape_b[0]):
-            rows_bxa_v.append(f"SUM(value{row} * column{col})")
-        cols_bxa_v += rows_bxa_v
 
     query = f"""WITH
     X AS (
@@ -282,20 +266,56 @@ def linear_krone_bert(shape_a: tuple[int, int], shape_b: tuple[int, int], table_
     B AS (
         SELECT * FROM {table_w_b} POSITIONAL JOIN VXX
     ),
-    BXT AS (
-        {' UNION ALL '.join(rows_bxt)}
-    ),
-    A AS (
-        SELECT * FROM BXT POSITIONAL JOIN {table_w_a}
-    ),
-    BXA AS (
-        SELECT {', '.join(cols_bxa_v)} FROM A
-    ),
-    Z AS (
-        UNPIVOT BXA ON COLUMNS(*) INTO NAME row_id VALUE value
-    )
-    SELECT value + b.column0 AS value
-    FROM Z POSITIONAL JOIN {b_relation} b
+    """
+
+    # k times matmul v(B v^-1(x) A^T)
+    col_a_format = f"{len(str(int(shape_a[0] * max_k - 1))):02d}"
+    col_b_format = f"{len(str(int(shape_b[0] * max_k - 1))):02d}"
+    for r in range(k):
+        rows_bxt = []
+        for row in range(shape_a[1]):
+            cols_bxt = []
+            for col in range(shape_b[0]):
+                cols_bxt.append(f"SUM(column{shape_b[0] * r + col:{col_b_format}} * value{row}) AS value{col}")
+
+            rows_bxt.append(f"SELECT {', '.join(cols_bxt)} FROM B")
+
+        cols_bxa_v = []
+        for col in range(shape_a[0]):
+            rows_bxa_v = []
+            for row in range(shape_b[0]):
+                rows_bxa_v.append(f"SUM(value{row} * column{shape_a[0] * r + col:{col_a_format}})")
+            cols_bxa_v += rows_bxa_v
+
+        query += f"""
+        BXT{r} AS (
+            {' UNION ALL '.join(rows_bxt)}
+        ),
+        A{r} AS (
+            SELECT * FROM BXT{r} POSITIONAL JOIN {table_w_a}
+        ),
+        BXA{r} AS (
+            SELECT {', '.join(cols_bxa_v)} FROM A{r}
+        ),
+        Z{r} AS (
+            UNPIVOT BXA{r} ON COLUMNS(*) INTO NAME row_id VALUE value{r}
+        ),"""
+
+    # remove last comma
+    query = query[:-1]
+
+    # sum up all Zs
+    z_col_terms = []
+    for r in range(k):
+        z_col_terms.append(f"value{r}")
+
+    z_rel_terms = []
+    for r in range(k):
+        z_rel_terms.append(f"Z{r}")
+
+    query += f"""
+    SELECT {' + '.join(z_col_terms)} + b.column0 AS value
+    FROM {' POSITIONAL JOIN '.join(z_rel_terms)} POSITIONAL JOIN {b_relation} b
     """
     return query
 
@@ -457,21 +477,21 @@ def run_krone_bert(con, sample_x):
     # Inference query
     # FC1
     h1 = execute(con, f"h1_krone_bert",
-                 linear_krone_bert(shape_a1, shape_b1, input_x, f"fc1_weight_4x{middle_layer[0]}_a_T",
-                                   f"fc1_weight_4x{middle_layer[0]}_b_T", f"fc1_bias_{middle_layer[0]}x1"))
+                 linear_krone_bert(shape_a1, shape_b1, input_x, f"fc1_weight_4x{middle_layer[0]}_a",
+                                   f"fc1_weight_4x{middle_layer[0]}_b", f"fc1_bias_{middle_layer[0]}x1"))
     z1 = execute(con, f"z1_krone_bert", activation_positional(h1))
 
     # FC2
     h2 = execute(con, f"h2_krone_bert",
-                 linear_krone_bert(shape_a2, shape_b2, z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_a_T",
-                                   f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_b_T",
+                 linear_krone_bert(shape_a2, shape_b2, z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_a",
+                                   f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_b",
                                    f"fc2_bias_{middle_layer[1]}x1"))
     z2 = execute(con, f"z2_krone_bert", activation_positional(h2))
 
     # FC3
     h3 = execute(con, f"h3_krone_bert",
-                 linear_krone_bert(shape_a3, shape_b3, z2, f"fc3_weight_{middle_layer[1]}x3_a_T",
-                                   f"fc3_weight_{middle_layer[1]}x3_b_T", f"fc3_bias_3x1"))
+                 linear_krone_bert(shape_a3, shape_b3, z2, f"fc3_weight_{middle_layer[1]}x3_a",
+                                   f"fc3_weight_{middle_layer[1]}x3_b", f"fc3_bias_3x1"))
     z3 = execute(con, f"output_krone_bert", softmax_positional(h3))
 
     return z3
@@ -516,8 +536,8 @@ if __name__ == "__main__":
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
     # Take first sample as test
-    # X_test = X[0:1]
-    # y_test = y[0:1]
+    # X_test = X[:1]
+    # y_test = y[:1]
 
     outputs = []
     for x, y_0 in zip(X_test, y_test):
@@ -528,8 +548,8 @@ if __name__ == "__main__":
         # output = time_run(run_alt_pivot, "Alternative (with pivot)", x, y_0)
         # output = time_run(run_alt_pivot_pos, "Alternative (with pivot and positional join)", x, y_0)
         # output = time_run(run_krone_row_idx, "Kronecker", x, y_0)
-        # output = time_run(run_krone_pivot_pos, "Kronecker alternative (with pivot and positional join)", x, y_0)
-        output = time_run(run_krone_bert, "Kronecker BERT", x, y_0)
+        output = time_run(run_krone_pivot_pos, "Kronecker alternative (with pivot and positional join)", x, y_0)
+        # output = time_run(run_krone_bert, "Kronecker BERT", x, y_0)
         outputs.append(output)
         time.sleep(1)
 
