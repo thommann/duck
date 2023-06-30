@@ -247,25 +247,25 @@ def linear_krone_bert(shape_a: tuple[int, int], shape_b: tuple[int, int], table_
                       b_relation: str) -> str:
     local_k = 1
     vx_terms = []
-    for i in range(shape_a[0]):
+    for i in range(shape_a[1]):
         vx_terms.append(f"CASE WHEN col_id = {i} THEN value END AS value{i}")
 
     vxx_terms = []
-    for i in range(shape_a[0]):
+    for i in range(shape_a[1]):
         vxx_terms.append(f"(SELECT value{i} FROM VX WHERE value{i} IS NOT NULL)")
 
     rows_bxt = []
-    for row in range(shape_a[0]):
+    for row in range(shape_a[1]):
         cols_bxt = []
-        for col in range(shape_b[1]):
+        for col in range(shape_b[0]):
             cols_bxt.append(f"SUM(column{col} * value{row}) AS value{col}")
 
         rows_bxt.append(f"SELECT {', '.join(cols_bxt)} FROM B")
 
     cols_bxa_v = []
-    for col in range(shape_a[1]):
+    for col in range(shape_a[0]):
         rows_bxa_v = []
-        for row in range(shape_b[1]):
+        for row in range(shape_b[0]):
             rows_bxa_v.append(f"SUM(value{row} * column{col})")
         cols_bxa_v += rows_bxa_v
 
