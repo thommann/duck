@@ -245,51 +245,58 @@ def linear_krone_pivot_pos(cols: int, table_z_a: str, table_z_b: str, table_w_a:
 
 def linear_krone_bert(shape_a: tuple[int, int], shape_b: tuple[int, int], table_z: str, table_w_a: str, table_w_b: str,
                       b_relation: str) -> str:
-    x_terms = []
-    for i in range(shape_a[1]):
-        x_terms.append(f"MAX(CASE WHEN col_id = {i} THEN value END) AS value{i}")
+    local_k = 1
+    vx_terms = []
+    for i in range(shape_a[0]):
+        vx_terms.append(f"CASE WHEN col_id = {i} THEN value END AS value{i}")
+
+    vxx_terms = []
+    for i in range(shape_a[0]):
+        vxx_terms.append(f"(SELECT value{i} FROM VX WHERE value{i} IS NOT NULL)")
 
     rows_bxt = []
-    for row in range(shape_a[1]):
+    for row in range(shape_a[0]):
         cols_bxt = []
-        for col in range(shape_b[0]):
+        for col in range(shape_b[1]):
             cols_bxt.append(f"SUM(column{col} * value{row}) AS value{col}")
 
         rows_bxt.append(f"SELECT {', '.join(cols_bxt)} FROM B")
 
     cols_bxa_v = []
-    for col in range(shape_a[0]):
+    for col in range(shape_a[1]):
         rows_bxa_v = []
-        for row in range(shape_b[0]):
+        for row in range(shape_b[1]):
             rows_bxa_v.append(f"SUM(value{row} * column{col})")
         cols_bxa_v += rows_bxa_v
 
     query = f"""WITH
     X AS (
-        SELECT FLOOR((ROW_NUMBER() OVER () - 1) / {shape_a[1]}) AS col_id, value AS value FROM {table_z}
+        SELECT FLOOR((ROW_NUMBER() OVER () - 1) / {shape_a[0]}) AS col_id, value AS value FROM {table_z}
     ),
     VX AS (
-        SELECT {', '.join(x_terms)} FROM X
+        SELECT {', '.join(vx_terms)} FROM X
+    ),
+    VXX AS (
+        SELECT * FROM {' POSITIONAL JOIN '.join(vxx_terms)}
     ),
     B AS (
-    SELECT * FROM {table_w_b} POSITIONAL JOIN VX
+        SELECT * FROM {table_w_b} POSITIONAL JOIN VXX
     ),
     BXT AS (
-    {' UNION ALL '.join(rows_bxt)}
+        {' UNION ALL '.join(rows_bxt)}
     ),
     A AS (
-    SELECT * FROM BXT POSITIONAL JOIN {table_w_a}
+        SELECT * FROM BXT POSITIONAL JOIN {table_w_a}
     ),
     BXA AS (
-    SELECT {', '.join(cols_bxa_v)} FROM A
+        SELECT {', '.join(cols_bxa_v)} FROM A
     ),
     Z AS (
-    UNPIVOT BXA ON COLUMNS(*) INTO NAME row_id VALUE value
+        UNPIVOT BXA ON COLUMNS(*) INTO NAME row_id VALUE value
     )
     SELECT value + b.column0 AS value
     FROM Z POSITIONAL JOIN {b_relation} b
     """
-    print(query)
     return query
 
 
@@ -506,11 +513,11 @@ if __name__ == "__main__":
     X = scaler.fit_transform(X)
 
     # Split the dataset into training and testing
-    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
     # Take first sample as test
-    X_test = X[0:1]
-    y_test = y[0:1]
+    # X_test = X[0:1]
+    # y_test = y[0:1]
 
     outputs = []
     for x, y_0 in zip(X_test, y_test):
