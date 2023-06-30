@@ -271,7 +271,7 @@ def linear_krone_bert(shape_a: tuple[int, int], shape_b: tuple[int, int], table_
 
     query = f"""WITH
     X AS (
-        SELECT FLOOR((ROW_NUMBER() OVER () - 1) / {shape_a[0]}) AS col_id, value AS value FROM {table_z}
+        SELECT FLOOR((ROW_NUMBER() OVER () - 1) / {shape_a[1]}) AS col_id, value AS value FROM {table_z}
     ),
     VX AS (
         SELECT {', '.join(vx_terms)} FROM X
