@@ -551,7 +551,7 @@ def inference(dataset: Bunch, model: str):
     X = scaler.fit_transform(X)
 
     # Split the dataset into training and testing
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     # Take first sample as test
     # X_test = X[:1]
@@ -571,7 +571,7 @@ def inference(dataset: Bunch, model: str):
         # output = time_run(run_krone_pivot_pos, "Kronecker alternative (with pivot and positional join)", x, y_0)
         output = time_run(con, run_krone_bert, "Kronecker BERT", x, y_0, model)
         outputs.append(output)
-        time.sleep(5)
+        # time.sleep(5)
 
     con.close()
 
@@ -592,5 +592,5 @@ def inference_mnist():
 
 
 if __name__ == "__main__":
-    # inference_iris()
-    inference_mnist()
+    inference_iris()
+    # inference_mnist()
