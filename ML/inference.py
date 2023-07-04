@@ -5,9 +5,12 @@ import numpy as np
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.utils import Bunch
 
 from ML.calculate_kronecker import do_decomposition
-from ML.params import middle_layer, use_sigmoid, k, shape_a1, shape_a2, shape_a3, shape_b1, shape_b2, shape_b3, max_k
+from ML.params import middle_layer, use_sigmoid, k, max_k, \
+    iris_default_relations, iris_alt_relations, iris_krone_relations, mnist_default_relations, mnist_alt_relations, \
+    mnist_krone_relations, mnist_shapes, iris_shapes
 from src.queries import kronecker_sum_product, kronecker_sum_product_separated
 
 
@@ -355,89 +358,105 @@ def execute(con: duckdb.DuckDBPyConnection, table: str, query: str) -> str:
 
 
 def run_default(con: duckdb.DuckDBPyConnection,
-                insert: callable, linear: callable, activation: callable, softmax: callable, sample_x,
+                insert: callable, linear: callable, activation: callable, softmax: callable, sample_x, model: str,
                 suffix: str = "") -> str:
+    relations = iris_default_relations if model == "iris" else mnist_default_relations if model == "mnist" else None
+    if relations is None:
+        raise ValueError(f"Unknown model {model}")
+
+    output_size = 3 if model == "iris" else 10 if model == "mnist" else None
+
     # Load the input
     input = insert(con, f"input{suffix}", sample_x)
 
     # Inference query
     # FC1
     h1 = execute(con, f"h1{suffix}",
-                 linear(middle_layer[0], input, f"fc1_weight_4x{middle_layer[0]}", f"fc1_bias_{middle_layer[0]}x1"))
+                 linear(middle_layer[0], input, relations[0][0], relations[0][1]))
     z1 = execute(con, f"z1{suffix}", activation(h1))
 
     # FC2
-    h2 = execute(con, f"h2{suffix}", linear(middle_layer[1], z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}",
-                                            f"fc2_bias_{middle_layer[1]}x1"))
+    h2 = execute(con, f"h2{suffix}", linear(middle_layer[1], z1, relations[1][0], relations[1][1]))
     z2 = execute(con, f"z2{suffix}", activation(h2))
 
     # FC3
-    h3 = execute(con, f"h3{suffix}", linear(3, z2, f"fc3_weight_{middle_layer[1]}x3", f"fc3_bias_3x1"))
+    h3 = execute(con, f"h3{suffix}", linear(output_size, z2, relations[2][0], relations[2][1]))
     z3 = execute(con, f"output{suffix}", softmax(h3))
 
     return z3
 
 
 def run_alt(con: duckdb.DuckDBPyConnection,
-            insert: callable, linear: callable, activation: callable, softmax: callable, sample_x,
+            insert: callable, linear: callable, activation: callable, softmax: callable, sample_x, model: str,
             suffix: str = "") -> str:
+    relations = iris_alt_relations if model == "iris" else mnist_alt_relations if model == "mnist" else None
+    if relations is None:
+        raise ValueError(f"Unknown model {model}")
+
+    output_size = 3 if model == "iris" else 10 if model == "mnist" else None
+
     # Load the input
     input = insert(con, f"input{suffix}", sample_x)
 
     # Inference query
     # FC1
     h1 = execute(con, f"h1{suffix}",
-                 linear(middle_layer[0], input, f"fc1_4x{middle_layer[0]}"))
+                 linear(middle_layer[0], input, relations[0]))
     z1 = execute(con, f"z1{suffix}", activation(h1))
 
     # FC2
-    h2 = execute(con, f"h2{suffix}", linear(middle_layer[1], z1, f"fc2_{middle_layer[0]}x{middle_layer[1]}"))
+    h2 = execute(con, f"h2{suffix}", linear(middle_layer[1], z1, relations[1]))
     z2 = execute(con, f"z2{suffix}", activation(h2))
 
     # FC3
-    h3 = execute(con, f"h3{suffix}", linear(3, z2, f"fc3_{middle_layer[1]}x3"))
+    h3 = execute(con, f"h3{suffix}", linear(output_size, z2, relations[2]))
     z3 = execute(con, f"output{suffix}", softmax(h3))
 
     return z3
 
 
-def run_row_idx(con, sample_x) -> str:
-    return run_default(con, insert, linear, activation, softmax, sample_x)
+def run_row_idx(con, sample_x, model: str) -> str:
+    return run_default(con, insert, linear, activation, softmax, sample_x, model)
 
 
-def run_positional(con, sample_x) -> str:
+def run_positional(con, sample_x, model: str) -> str:
     return run_default(con, insert_positional, linear_positional, activation_positional, softmax_positional, sample_x,
-                       suffix="_pos")
+                       model, suffix="_pos")
 
 
-def run_pivot_pos(con, sample_x) -> str:
+def run_pivot_pos(con, sample_x, model: str) -> str:
     return run_default(con, insert_positional, linear_pivot_pos, activation_positional, softmax_positional, sample_x,
-                       suffix="_pivot_pos")
+                       model, suffix="_pivot_pos")
 
 
-def run_alt_row_idx(con, sample_x) -> str:
-    return run_alt(con, insert_alt, linear_alt, activation, softmax, sample_x, suffix="_alt")
+def run_alt_row_idx(con, sample_x, model: str) -> str:
+    return run_alt(con, insert_alt, linear_alt, activation, softmax, sample_x, model, suffix="_alt")
 
 
-def run_alt_pivot(con, sample_x) -> str:
-    return run_alt(con, insert_alt, linear_alt_pivot, activation, softmax, sample_x, suffix="_alt_pivot")
+def run_alt_pivot(con, sample_x, model: str) -> str:
+    return run_alt(con, insert_alt, linear_alt_pivot, activation, softmax, sample_x, model, suffix="_alt_pivot")
 
 
-def run_alt_pivot_pos(con, sample_x) -> str:
+def run_alt_pivot_pos(con, sample_x, model: str) -> str:
     return run_alt(con, insert_alt_pos, linear_alt_pivot_pos, activation_positional, softmax_positional, sample_x,
-                   suffix="_alt_pivot_pos")
+                   model, suffix="_alt_pivot_pos")
 
 
-def run_krone(con, insert: callable, linear: callable, activation: callable, softmax: callable, sample_x,
+def run_krone(con, insert: callable, linear: callable, activation: callable, softmax: callable, sample_x, model: str,
               suffix="") -> str:
+    relations = iris_krone_relations if model == "iris" else mnist_krone_relations if model == "mnist" else None
+    if relations is None:
+        raise ValueError(f"Unknown model {model}")
+
+    output_size = 3 if model == "iris" else 10 if model == "mnist" else None
+
     # Load the input
     input_a, input_b = insert(con, f"input_kron{suffix}_a", f"input_kron{suffix}_b", sample_x)
 
     # Inference query
     # FC1
     h1 = execute(con, f"h1_kron{suffix}",
-                 linear(middle_layer[0], input_a, input_b, f"fc1_weight_4x{middle_layer[0]}_a",
-                        f"fc1_weight_4x{middle_layer[0]}_b", f"fc1_bias_{middle_layer[0]}x1"))
+                 linear(middle_layer[0], input_a, input_b, relations[0][0], relations[0][1], relations[0][2]))
     z1 = execute(con, f"z1_kron{suffix}", activation(h1))
     z1_values = con.execute(f"SELECT value FROM {z1}").fetchall()
     z1_values = np.array(z1_values).reshape(middle_layer[0], 1)
@@ -445,8 +464,7 @@ def run_krone(con, insert: callable, linear: callable, activation: callable, sof
 
     # FC2
     h2 = execute(con, f"h2_kron{suffix}",
-                 linear(middle_layer[1], z1_a, z1_b, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_a",
-                        f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_b", f"fc2_bias_{middle_layer[1]}x1"))
+                 linear(middle_layer[1], z1_a, z1_b, relations[1][0], relations[1][1], relations[1][2]))
     z2 = execute(con, f"z2_kron{suffix}", activation(h2))
     z2_values = con.execute(f"SELECT value FROM {z2}").fetchall()
     z2_values = np.array(z2_values).reshape(middle_layer[1], 1)
@@ -454,58 +472,59 @@ def run_krone(con, insert: callable, linear: callable, activation: callable, sof
 
     # FC3
     h3 = execute(con, f"h3_kron{suffix}",
-                 linear(3, z2_a, z2_b, f"fc3_weight_{middle_layer[1]}x3_a", f"fc3_weight_{middle_layer[1]}x3_b",
-                        f"fc3_bias_3x1"))
+                 linear(output_size, z2_a, z2_b, relations[2][0], relations[2][1], relations[2][2]))
     z3 = execute(con, f"output_kron{suffix}", softmax(h3))
 
     return z3
 
 
-def run_krone_row_idx(con, sample_x):
-    return run_krone(con, insert_krone, linear_krone, activation, softmax, sample_x)
+def run_krone_row_idx(con, sample_x, model: str) -> str:
+    return run_krone(con, insert_krone, linear_krone, activation, softmax, sample_x, model)
 
 
-def run_krone_pivot_pos(con, sample_x):
+def run_krone_pivot_pos(con, sample_x, model: str) -> str:
     return run_krone(con, insert_krone_pos, linear_krone_pivot_pos, activation_positional, softmax_positional, sample_x,
-                     suffix="_pivot_pos")
+                     model, suffix="_pivot_pos")
 
 
-def run_krone_bert(con, sample_x):
+def run_krone_bert(con, sample_x, model: str):
+    relations = iris_krone_relations if model == "iris" else mnist_krone_relations if model == "mnist" else None
+    if relations is None:
+        raise ValueError(f"Unknown model {model}")
+
+    shapes = iris_shapes if model == "iris" else mnist_shapes if model == "mnist" else None
+
     # Load the input
     input_x = insert_positional(con, f"input_krone_bert", sample_x)
 
     # Inference query
     # FC1
     h1 = execute(con, f"h1_krone_bert",
-                 linear_krone_bert(shape_a1, shape_b1, input_x, f"fc1_weight_4x{middle_layer[0]}_a",
-                                   f"fc1_weight_4x{middle_layer[0]}_b", f"fc1_bias_{middle_layer[0]}x1"))
+                 linear_krone_bert(shapes[0][0], shapes[0][1], input_x, relations[0][0], relations[0][1],
+                                   relations[0][2]))
     z1 = execute(con, f"z1_krone_bert", activation_positional(h1))
 
     # FC2
     h2 = execute(con, f"h2_krone_bert",
-                 linear_krone_bert(shape_a2, shape_b2, z1, f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_a",
-                                   f"fc2_weight_{middle_layer[0]}x{middle_layer[1]}_b",
-                                   f"fc2_bias_{middle_layer[1]}x1"))
+                 linear_krone_bert(shapes[1][0], shapes[1][1], z1, relations[1][0], relations[1][1], relations[1][2]))
     z2 = execute(con, f"z2_krone_bert", activation_positional(h2))
 
     # FC3
     h3 = execute(con, f"h3_krone_bert",
-                 linear_krone_bert(shape_a3, shape_b3, z2, f"fc3_weight_{middle_layer[1]}x3_a",
-                                   f"fc3_weight_{middle_layer[1]}x3_b", f"fc3_bias_3x1"))
+                 linear_krone_bert(shapes[2][0], shapes[2][1], z2, relations[2][0], relations[2][1], relations[2][2]))
     z3 = execute(con, f"output_krone_bert", softmax_positional(h3))
 
     return z3
 
 
-def time_run(runner: callable, title: str, sample_x, target_y):
-    con = duckdb.connect(f'data/ml{middle_layer[0]}x{middle_layer[1]}.db', read_only=False)
+def time_run(con: duckdb.DuckDBPyConnection, runner: callable, title: str, sample_x, target_y, model: str):
     con.execute(f"PRAGMA max_expression_depth={np.max(middle_layer) * 10};")
-    out_relation: str = runner(con, sample_x)
+    out_relation: str = runner(con, sample_x, model)
     print(title, flush=True)
     times = []
     for i in range(10):
         start = time.time()
-        _ = runner(con, sample_x)
+        _ = runner(con, sample_x, model)
         s = time.time() - start
         times.append(s)
 
@@ -514,7 +533,6 @@ def time_run(runner: callable, title: str, sample_x, target_y):
     res_list = [item for sublist in res for item in sublist]
     # res_list[0] += 0.5
     category = np.argmax(res_list)
-    con.close()
     print(f"Result: {res_list}", flush=True)
     print(f"Category/Target: {category}/{target_y}", flush=True)
     print(f"Average: {np.mean(times) * 1000:.0f}ms", flush=True)
@@ -522,11 +540,11 @@ def time_run(runner: callable, title: str, sample_x, target_y):
     return category
 
 
-if __name__ == "__main__":
+def inference(dataset: Bunch, model: str):
     # Load the dataset
-    iris = datasets.load_iris()
-    X = iris.data
-    y = iris.target
+    X = dataset.data
+    y = dataset.target
+    y = y.astype(int)
 
     # Scale the features for better training
     scaler = StandardScaler()
@@ -539,6 +557,8 @@ if __name__ == "__main__":
     # X_test = X[:1]
     # y_test = y[:1]
 
+    con = duckdb.connect(f'data/{model}_{middle_layer[0]}x{middle_layer[1]}.db', read_only=False)
+
     outputs = []
     for x, y_0 in zip(X_test, y_test):
         # time_run(run_row_idx, "Default")
@@ -546,14 +566,31 @@ if __name__ == "__main__":
         # time_run(run_pivot_pos, "Default (with pivot and positional join)")
         # time_run(run_alt_row_idx, "Alternative")
         # output = time_run(run_alt_pivot, "Alternative (with pivot)", x, y_0)
-        # output = time_run(run_alt_pivot_pos, "Alternative (with pivot and positional join)", x, y_0)
+        # output = time_run(con, run_alt_pivot_pos, "Alternative (with pivot and positional join)", x, y_0, model)
         # output = time_run(run_krone_row_idx, "Kronecker", x, y_0)
-        output = time_run(run_krone_pivot_pos, "Kronecker alternative (with pivot and positional join)", x, y_0)
-        # output = time_run(run_krone_bert, "Kronecker BERT", x, y_0)
+        # output = time_run(run_krone_pivot_pos, "Kronecker alternative (with pivot and positional join)", x, y_0)
+        output = time_run(con, run_krone_bert, "Kronecker BERT", x, y_0, model)
         outputs.append(output)
-        time.sleep(1)
+        time.sleep(5)
+
+    con.close()
 
     # Print the accuracy
     print(f"Accuracy: {np.sum(np.array(outputs) == y_test) / len(y_test)}")
 
     print("Done!")
+
+
+def inference_iris():
+    iris = datasets.load_iris()
+    inference(iris, "iris")
+
+
+def inference_mnist():
+    mnist = datasets.fetch_openml('mnist_784', version=1, cache=True, as_frame=False, parser='liac-arff')
+    inference(mnist, "mnist")
+
+
+if __name__ == "__main__":
+    # inference_iris()
+    inference_mnist()
