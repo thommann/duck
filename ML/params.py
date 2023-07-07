@@ -1,7 +1,7 @@
 middle_layer = (100, 50)
 use_sigmoid = True
 
-k = 1
+k = 4
 max_k = 5
 
 fc_layers = [('fc1.weight', 'fc1.bias'),

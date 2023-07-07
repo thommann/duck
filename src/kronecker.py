@@ -66,7 +66,7 @@ def compute_shapes(shape: tuple[int, int], compress_cols: bool = False) -> tuple
 
 def kronecker_decomposition(u_mat: np.ndarray, s_vec: np.ndarray, vh_mat: np.ndarray,
                             shape_a: tuple[int, int], shape_b: tuple[int, int],
-                            k: int = 1) -> tuple[np.ndarray, np.ndarray]:
+                            k: int = 1) -> tuple[list[np.ndarray], list[np.ndarray]]:
     v_mat = vh_mat.transpose()
     scales = np.sqrt(s_vec)
     u_mat_scaled = u_mat * scales
@@ -84,7 +84,7 @@ def kronecker_decomposition(u_mat: np.ndarray, s_vec: np.ndarray, vh_mat: np.nda
         else:
             b_matrices.append(np.zeros(shape_b))
 
-    return np.hstack(a_matrices), np.hstack(b_matrices)
+    return a_matrices, b_matrices
 
 
 def svd(matrix: np.ndarray, shape_a: tuple[int, int]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:

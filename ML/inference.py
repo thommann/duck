@@ -8,17 +8,17 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import Bunch
 
 from ML.params import middle_layer, use_sigmoid, iris_default_relations, mnist_default_relations, mnist_krone_relations, \
-    iris_krone_relations
+    iris_krone_relations, k
 
 
-def insert(db_connection: duckdb.DuckDBPyConnection, z_table: str, z_vector: np.ndarray) -> str:
-    db_connection.execute(f"CREATE OR REPLACE TABLE {z_table} (row INTEGER, col INTEGER, val DOUBLE)")
+def insert(db_connection: duckdb.DuckDBPyConnection, h_table: str, h_vector: np.ndarray) -> str:
+    db_connection.execute(f"CREATE OR REPLACE TABLE {h_table} (row INTEGER, col INTEGER, val DOUBLE)")
     row = 0
-    for val in z_vector:
-        db_connection.execute(f"INSERT INTO {z_table} VALUES ({row}, 0, {val})")
+    for val in h_vector:
+        db_connection.execute(f"INSERT INTO {h_table} VALUES ({row}, 0, {val})")
         row += 1
-    db_connection.execute(f"INSERT INTO {z_table} VALUES ({row + 1}, 0,  1)")
-    return z_table
+    db_connection.execute(f"INSERT INTO {h_table} VALUES ({row}, 0,  1)")
+    return h_table
 
 
 def matmul(a_table: str, b_table: str) -> str:
@@ -32,49 +32,69 @@ def add_bias_neuron(z_table: str) -> str:
     return f"SELECT row, col, val FROM {z_table} UNION ALL SELECT MAX(row) + 1, 0, 1 FROM {z_table}"
 
 
-def linear_default(w_table: str, z_table: str) -> str:
+def linear_default(w_table: str, h_table: str) -> str:
     # Matrix multiplication: WZ
-    query = matmul(w_table, z_table)
+    query = matmul(w_table, h_table)
     return query
 
 
-def linear_krone(a_table: str, b_table: str, z_table: str) -> str:
-    # Reshape Z to (max(b_table.col) + 1, max(a_table.col) + 1)
-    query = f"WITH N2 AS(SELECT MAX(col) + 1 AS val FROM {b_table}), " \
-            f"VZ AS(" \
-            f"SELECT " \
-            f"FLOOR(row / (SELECT val FROM N2)) AS row, " \
-            f"row % (SELECT val FROM N2) AS col, " \
-            f"val FROM {z_table}" \
-            f"), "
-    # Matrix multiplication: B(VZ)
-    query += f"BVZ AS({matmul(b_table, 'VZ')}), "
-    # Matrix multiplication: (BVZ)A
-    query += f"BVZA AS({matmul('BVZ', a_table)}), "
-    # Reshape BVHA to ((max(a_table.row) + 1) * (max(b_table.row) + 1), 1)
-    query += f"M1 AS(SELECT MAX(col) + 1 AS val FROM {a_table}), " \
-             f"M2 AS(SELECT MAX(row) + 1 AS val FROM {b_table}) " \
-             f"SELECT " \
-             f"row + col * (SELECT val FROM M2) AS row, " \
-             f"0 AS col, " \
-             f"val FROM BVZA " \
-             f"ORDER BY row"
+def linear_krone(a_table: str, b_table: str, h_table: str) -> str:
+    # Reshape H to (max(b_table.col) + 1, max(a_table.col) + 1)
+    query = f"WITH\n" \
+            f"M2 AS(SELECT MAX(row) + 1 AS val FROM {b_table}),\n" \
+            f"N2 AS(SELECT MAX(col) + 1 AS val FROM {b_table}),\n" \
+            f"VH AS(\n" \
+            f"SELECT\n" \
+            f"row % ((SELECT val FROM N2)) AS row,\n" \
+            f"FLOOR(row / ((SELECT val FROM N2))) AS col,\n" \
+            f"val FROM {h_table}\n" \
+            f"),\n"
+    for rank in range(k):
+        query += f"B{rank} AS(SELECT * FROM {b_table} WHERE k = {rank}),\n"
+        # Matrix multiplication: B(VH)
+        query += f"BVH{rank} AS({matmul(f'B{rank}', 'VH')}),\n"
+        query += f"A{rank} AS(SELECT * FROM {a_table} WHERE k = {rank}),\n"
+        # Matrix multiplication: (BVH)A
+        query += f"BVHA{rank} AS({matmul(f'BVH{rank}', f'A{rank}')}),\n"
+        # Reshape BVHA to ((max(a_table.row) + 1) * (max(b_table.row) + 1), 1)
+        query += f"VBVHA{rank} AS(\n" \
+                 f"SELECT\n" \
+                 f"row + col * (SELECT val FROM M2) AS row,\n" \
+                 f"0 AS col,\n" \
+                 f"val FROM BVHA{rank}\n" \
+                 f"ORDER BY row\n" \
+                 f"),\n"
+
+    # Remove the last comma
+    query = query[:-2] + "\n"
+
+    # Add all the VBVHA together
+    values = [f"VBVHA{rank}.val" for rank in range(k)]
+    tables = [f"VBVHA{rank}" for rank in range(k)]
+    conditions = [f"VBVHA{rank}.row = VBVHA0.row AND VBVHA{rank}.col = VBVHA0.col" for rank in range(1, k)]
+    query += f"SELECT VBVHA0.row, VBVHA0.col, {' + '.join(values)} AS val\n" \
+             f"FROM {' , '.join(tables)}\n"
+    if len(conditions) > 0:
+        query += f"WHERE {' AND '.join(conditions)}\n"
+    query += f"ORDER BY VBVHA0.row, VBVHA0.col\n"
+
+    # print(query)
     return query
 
 
-def relu(h_table: str) -> str:
-    return f"SELECT row, col, CASE WHEN val < 0 THEN 0 ELSE val END AS val FROM {h_table}"
+def relu(z_table: str) -> str:
+    return f"SELECT row, col, CASE WHEN val < 0 THEN 0 ELSE val END AS val FROM {z_table}"
 
 
-def sigmoid(h_table: str) -> str:
-    return f"SELECT row, col, 1 / (1 + EXP(-val)) AS val FROM {h_table}"
+def sigmoid(z_table: str) -> str:
+    return f"SELECT row, col, 1 / (1 + EXP(-val)) AS val FROM {z_table}"
 
 
 activation = sigmoid if use_sigmoid else relu
 
 
-def softmax(h_table: str) -> str:
-    return f"SELECT row, col, EXP(val) / SUM(EXP(val)) OVER () AS val FROM {h_table}"
+def softmax(z_table: str) -> str:
+    return f"SELECT row, col, EXP(val) / SUM(EXP(val)) OVER () AS val FROM {z_table}"
 
 
 def execute(db_connection: duckdb.DuckDBPyConnection, table: str, query: str) -> str:
@@ -93,18 +113,18 @@ def run_default(db_connection: duckdb.DuckDBPyConnection, x_vector: np.ndarray, 
 
     # Inference query
     # FC1
-    h1_ = execute(db_connection, f"H1_", linear_default(relations[0], x))
+    z1 = execute(db_connection, f"Z1", linear_default(relations[0], x))
+    h1_ = execute(db_connection, f"H1_", activation(z1))
     h1 = execute(db_connection, f"H1", add_bias_neuron(h1_))
-    z1 = execute(db_connection, f"Z1", activation(h1))
 
     # FC2
-    h2_ = execute(db_connection, f"H2_", linear_default(relations[1], z1))
+    z2 = execute(db_connection, f"Z2", linear_default(relations[1], h1))
+    h2_ = execute(db_connection, f"H2_", activation(z2))
     h2 = execute(db_connection, f"H2", add_bias_neuron(h2_))
-    z2 = execute(db_connection, f"Z2", activation(h2))
 
     # FC3
-    h3_ = execute(db_connection, f"H3_", linear_default(relations[2], z2))
-    y = execute(db_connection, f"Z3", softmax(h3_))
+    z3 = execute(db_connection, f"Z3", linear_default(relations[2], h2))
+    y = execute(db_connection, f"H3", softmax(z3))
 
     return y
 
@@ -119,18 +139,18 @@ def run_krone(db_connection: duckdb.DuckDBPyConnection, x_vector: np.ndarray, mo
 
     # Inference query
     # FC1
-    h1_ = execute(db_connection, f"KDH1_", linear_krone(relations[0], relations[1], x))
+    z1 = execute(db_connection, f"KDZ1", linear_krone(relations[0], relations[1], x))
+    h1_ = execute(db_connection, f"KDH1_", activation(z1))
     h1 = execute(db_connection, f"KDH1", add_bias_neuron(h1_))
-    z1 = execute(db_connection, f"KDZ1", activation(h1))
 
     # FC2
-    h2_ = execute(db_connection, f"KDH2_", linear_krone(relations[2], relations[3], z1))
+    z2 = execute(db_connection, f"KDZ2", linear_krone(relations[2], relations[3], h1))
+    h2_ = execute(db_connection, f"KDH2_", activation(z2))
     h2 = execute(db_connection, f"KDH2", add_bias_neuron(h2_))
-    z2 = execute(db_connection, f"KDZ2", activation(h2))
 
     # FC3
-    h3_ = execute(db_connection, f"KDH3_", linear_krone(relations[4], relations[5], z2))
-    y = execute(db_connection, f"KDZ3", softmax(h3_))
+    z3 = execute(db_connection, f"KDZ3", linear_krone(relations[4], relations[5], h2))
+    y = execute(db_connection, f"KDZ3", softmax(z3))
 
     return y
 
@@ -156,6 +176,8 @@ def inference(dataset: Bunch, model: str):
 
     predictions_default = []
     predictions_krone = []
+    times_default = []
+    times_krone = []
     for x, y_0 in zip(X_test, y_test):
         # Run default
         y_table_default = run_default(con, x, model)
@@ -163,7 +185,6 @@ def inference(dataset: Bunch, model: str):
             f"SELECT val FROM {y_table_default} ORDER BY row, col").fetchall()
         y_predicted_default = np.argmax(y_vector_default)
         predictions_default.append(y_predicted_default)
-        print(f"Default: {y_predicted_default} (expected {y_0})")
 
         # Run Kronecker
         y_table_krone = run_krone(con, x, model)
@@ -171,13 +192,29 @@ def inference(dataset: Bunch, model: str):
             f"SELECT val FROM {y_table_krone} ORDER BY row, col").fetchall()
         y_predicted_krone = np.argmax(y_vector_krone)
         predictions_krone.append(y_predicted_krone)
-        print(f"Kronecker: {y_predicted_krone} (expected {y_0})")
+
+        # Time the queries
+        for i in range(10):
+            start = time.time()
+            run_default(con, x, model)
+            end = time.time()
+            times_default.append(end - start)
+
+        for i in range(10):
+            start = time.time()
+            run_krone(con, x, model)
+            end = time.time()
+            times_krone.append(end - start)
 
     con.close()
 
     # Print the accuracy
-    print(f"Default accuracy: {np.mean(predictions_default == y_test)}")
-    print(f"Kronecker accuracy: {np.mean(predictions_krone == y_test)}")
+    print(f"Default accuracy: {np.mean(predictions_default == y_test):.2f}")
+    print(f"Kronecker accuracy: {np.mean(predictions_krone == y_test):.2f}")
+
+    # Print the times
+    print(f"Default time: {np.mean(times_default) * 1000:.0f}ms")
+    print(f"Kronecker time: {np.mean(times_krone) * 1000:.0f}ms")
 
     print("Done!")
 

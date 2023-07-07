@@ -1,11 +1,11 @@
 import numpy as np
 import torch
 
-from ML.params import middle_layer, fc_layers
+from ML.params import middle_layer, fc_layers, max_k
 from src.kronecker import svd, compute_shapes, kronecker_decomposition
 
 
-def calculate_kronecker(matrix, k=1, cc=False) -> tuple[np.ndarray, np.ndarray]:
+def calculate_kronecker(matrix, k=1, cc=False) -> tuple[list[np.ndarray], list[np.ndarray]]:
     shape_c = matrix.shape
     shape_a, shape_b = compute_shapes(shape_c, compress_cols=cc)
     u, s, vh = svd(matrix, shape_a)
@@ -13,11 +13,14 @@ def calculate_kronecker(matrix, k=1, cc=False) -> tuple[np.ndarray, np.ndarray]:
     return a, b
 
 
-def to_tensor(matrix: np.ndarray) -> np.ndarray:
-    tensor = np.zeros((matrix.shape[0] * matrix.shape[1], 3))
+def to_tensor(matrix: np.ndarray, rank: int = None) -> np.ndarray:
+    nr_cols = 3 if rank is None else 4
+    tensor = np.zeros((matrix.shape[0] * matrix.shape[1], nr_cols))
     for i in range(matrix.shape[0]):
         for j in range(matrix.shape[1]):
-            tensor[i * matrix.shape[1] + j] = [i, j, matrix[i, j]]
+            tensor[i * matrix.shape[1] + j, :3] = [i, j, matrix[i, j]]
+            if rank is not None:
+                tensor[i * matrix.shape[1] + j, 3] = rank
     return tensor
 
 
@@ -28,19 +31,24 @@ def extract_parameters(model: str):
         bias = np.atleast_2d(state_dict[b])
         fc = np.vstack((weight, bias))
         fc_transpose = fc.T
-        a, b = calculate_kronecker(fc_transpose)
-        a_transpose = a.T
+        a, b = calculate_kronecker(fc_transpose, k=max_k, cc=True)
 
         # Save to file in tensor notation
         fc_tensor = to_tensor(fc_transpose)
-        a_tensor = to_tensor(a_transpose)
-        b_tensor = to_tensor(b)
+        a_tensors = []
+        b_tensors = []
+        for k in range(max_k):
+            a_tensors.append(to_tensor(a[k].T, rank=k))
+            b_tensors.append(to_tensor(b[k], rank=k))
+
+        a_tensor = np.vstack(a_tensors)
+        b_tensor = np.vstack(b_tensors)
 
         layer = w.replace('.weight', '')
         filename = f"{model}_{layer}_{middle_layer[0]}x{middle_layer[1]}"
         np.savetxt(f"data/{filename}.csv", fc_tensor, delimiter=',', header="row,col,val", comments='')
-        np.savetxt(f"data/{filename}_a.csv", a_tensor, delimiter=',', header="row,col,val", comments='')
-        np.savetxt(f"data/{filename}_b.csv", b_tensor, delimiter=',', header="row,col,val", comments='')
+        np.savetxt(f"data/{filename}_a.csv", a_tensor, delimiter=',', header="row,col,val,k", comments='')
+        np.savetxt(f"data/{filename}_b.csv", b_tensor, delimiter=',', header="row,col,val,k", comments='')
 
 
 def main():

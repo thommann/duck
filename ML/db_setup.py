@@ -1,6 +1,6 @@
 import duckdb
 
-from ML.params import middle_layer, matrices, iris_relations, mnist_relations
+from ML.params import middle_layer, matrices, iris_relations, mnist_relations, krone_matrices
 from ML.extract_parameters import extract_parameters
 
 
@@ -24,6 +24,11 @@ def setup_db(model: str):
             f"ALTER TABLE {relation} "
             f"ALTER COLUMN col TYPE INTEGER"
         )
+        if matrix in krone_matrices:
+            con.execute(
+                f"ALTER TABLE {relation} "
+                f"ALTER COLUMN k TYPE INTEGER"
+            )
     con.close()
     print("All done!")
 

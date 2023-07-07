@@ -33,7 +33,8 @@ def try_kronecker_decomposition(output_a: str, output_b: str,
         a_mat = np.loadtxt(output_a, delimiter=',')
         b_mat = np.loadtxt(output_b, delimiter=',')
     except OSError:
-        a_mat, b_mat = kronecker_decomposition(u_mat, s_vec, vh_mat, shape_a, shape_b, k=k)
+        a_matrices, b_matrices = kronecker_decomposition(u_mat, s_vec, vh_mat, shape_a, shape_b, k=k)
+        a_mat, b_mat = np.hstack(a_matrices), np.hstack(b_matrices)
         np.savetxt(output_a, a_mat, delimiter=',')
         np.savetxt(output_b, b_mat, delimiter=',')
     return a_mat, b_mat
