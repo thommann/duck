@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import Bunch
 
 from ML.params import middle_layer, use_sigmoid, iris_default_relations, mnist_default_relations, mnist_krone_relations, \
-    iris_krone_relations, k
+    iris_krone_relations, k, nr_runs
 
 
 def insert(db_connection: duckdb.DuckDBPyConnection, h_table: str, h_vector: np.ndarray) -> str:
@@ -56,29 +56,25 @@ def linear_krone(a_table: str, b_table: str, h_table: str) -> str:
         query += f"A{rank} AS(SELECT * FROM {a_table} WHERE k = {rank}),\n"
         # Matrix multiplication: (BVH)A
         query += f"BVHA{rank} AS({matmul(f'BVH{rank}', f'A{rank}')}),\n"
-        # Reshape BVHA to ((max(a_table.row) + 1) * (max(b_table.row) + 1), 1)
-        query += f"VBVHA{rank} AS(\n" \
-                 f"SELECT\n" \
-                 f"row + col * (SELECT val FROM M2) AS row,\n" \
-                 f"0 AS col,\n" \
-                 f"val FROM BVHA{rank}\n" \
-                 f"ORDER BY row\n" \
-                 f"),\n"
-
-    # Remove the last comma
-    query = query[:-2] + "\n"
 
     # Add all the VBVHA together
-    values = [f"VBVHA{rank}.val" for rank in range(k)]
-    tables = [f"VBVHA{rank}" for rank in range(k)]
-    conditions = [f"VBVHA{rank}.row = VBVHA0.row AND VBVHA{rank}.col = VBVHA0.col" for rank in range(1, k)]
-    query += f"SELECT VBVHA0.row, VBVHA0.col, {' + '.join(values)} AS val\n" \
+    values = [f"BVHA{rank}.val" for rank in range(k)]
+    tables = [f"BVHA{rank}" for rank in range(k)]
+    conditions = [f"BVHA{rank}.row = BVHA0.row AND BVHA{rank}.col = BVHA0.col" for rank in range(1, k)]
+    query += f"BVHA AS (" \
+             f"SELECT BVHA0.row, BVHA0.col, {' + '.join(values)} AS val\n" \
              f"FROM {' , '.join(tables)}\n"
     if len(conditions) > 0:
         query += f"WHERE {' AND '.join(conditions)}\n"
-    query += f"ORDER BY VBVHA0.row, VBVHA0.col\n"
+    query += f"ORDER BY BVHA0.row, BVHA0.col\n" \
+             f")\n"
 
-    # print(query)
+    # Reshape BVHA to ((max(a_table.row) + 1) * (max(b_table.row) + 1), 1)
+    query += f"SELECT\n" \
+             f"row + col * (SELECT val FROM M2) AS row,\n" \
+             f"0 AS col,\n" \
+             f"val FROM BVHA\n" \
+             f"ORDER BY row\n"
     return query
 
 
@@ -178,7 +174,10 @@ def inference(dataset: Bunch, model: str):
     predictions_krone = []
     times_default = []
     times_krone = []
+    j = 0
     for x, y_0 in zip(X_test, y_test):
+        j += 1
+        print(f"Running inference for sample {j}/{len(X_test)}")
         # Run default
         y_table_default = run_default(con, x, model)
         y_vector_default = con.execute(
@@ -194,19 +193,20 @@ def inference(dataset: Bunch, model: str):
         predictions_krone.append(y_predicted_krone)
 
         # Time the queries
-        for i in range(10):
+        for i in range(nr_runs):
             start = time.time()
             run_default(con, x, model)
             end = time.time()
             times_default.append(end - start)
 
-        for i in range(10):
+        for i in range(nr_runs):
             start = time.time()
             run_krone(con, x, model)
             end = time.time()
             times_krone.append(end - start)
 
     con.close()
+    print()
 
     # Print the accuracy
     print(f"Default accuracy: {np.mean(predictions_default == y_test):.2f}")

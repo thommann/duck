@@ -1,8 +1,10 @@
-middle_layer = (100, 50)
-use_sigmoid = True
+middle_layer = (1000, 1000)
+use_sigmoid = False
 
-k = 4
-max_k = 5
+k = 1
+max_k = 10
+
+nr_runs = 1
 
 fc_layers = [('fc1.weight', 'fc1.bias'),
              ('fc2.weight', 'fc2.bias'),

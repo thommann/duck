@@ -30,16 +30,16 @@ def extract_parameters(model: str):
         weight = np.atleast_2d(state_dict[w]).T
         bias = np.atleast_2d(state_dict[b])
         fc = np.vstack((weight, bias))
+        a, b = calculate_kronecker(fc, k=max_k, cc=False)
         fc_transpose = fc.T
-        a, b = calculate_kronecker(fc_transpose, k=max_k, cc=True)
 
         # Save to file in tensor notation
         fc_tensor = to_tensor(fc_transpose)
         a_tensors = []
         b_tensors = []
         for k in range(max_k):
-            a_tensors.append(to_tensor(a[k].T, rank=k))
-            b_tensors.append(to_tensor(b[k], rank=k))
+            a_tensors.append(to_tensor(a[k], rank=k))
+            b_tensors.append(to_tensor(b[k].T, rank=k))
 
         a_tensor = np.vstack(a_tensors)
         b_tensor = np.vstack(b_tensors)
