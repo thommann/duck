@@ -57,7 +57,7 @@ def linear_krone(a_table: str, b_table: str, h_table: str) -> str:
         # Matrix multiplication: (BVH)A
         query += f"BVHA{rank} AS({matmul(f'BVH{rank}', f'A{rank}')}),\n"
 
-    # Add all the VBVHA together
+    # Add all the BVHAs together
     values = [f"BVHA{rank}.val" for rank in range(k)]
     tables = [f"BVHA{rank}" for rank in range(k)]
     conditions = [f"BVHA{rank}.row = BVHA0.row AND BVHA{rank}.col = BVHA0.col" for rank in range(1, k)]
