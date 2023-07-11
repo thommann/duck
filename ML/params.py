@@ -5,7 +5,7 @@ k = 4
 max_k = 10
 
 nr_runs = 1
-use_index_join = False
+use_index_join = True
 
 fc_layers = [('fc1.weight', 'fc1.bias'),
              ('fc2.weight', 'fc2.bias'),

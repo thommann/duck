@@ -117,30 +117,22 @@ def run_default(db_connection: duckdb.DuckDBPyConnection, x_vector: np.ndarray, 
         raise ValueError(f"Unknown model {model}")
 
     # Load the input
-    start = time.time()
     x = insert(db_connection, f"X", x_vector)
-    print(f"Inserting X took {time.time() - start} seconds")
 
     # Inference query
     # FC1
-    start = time.time()
     z1 = execute(db_connection, f"Z1", linear_default(relations[0], x))
     h1_ = execute(db_connection, f"H1_", activation(z1))
     h1 = execute(db_connection, f"H1", add_bias_neuron(h1_))
-    print(f"FC1 took {time.time() - start} seconds")
 
     # FC2
-    start = time.time()
     z2 = execute(db_connection, f"Z2", linear_default(relations[1], h1))
     h2_ = execute(db_connection, f"H2_", activation(z2))
     h2 = execute(db_connection, f"H2", add_bias_neuron(h2_))
-    print(f"FC2 took {time.time() - start} seconds")
 
     # FC3
-    start = time.time()
     z3 = execute(db_connection, f"Z3", linear_default(relations[2], h2))
     y = execute(db_connection, f"H3", softmax(z3))
-    print(f"FC3 took {time.time() - start} seconds")
 
     return y
 
@@ -225,7 +217,6 @@ def inference(dataset: Bunch, model: str):
             end = time.time()
             times_default.append(end - start)
 
-        for i in range(nr_runs):
             start = time.time()
             run_krone(con, x, model)
             end = time.time()
