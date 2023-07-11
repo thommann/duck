@@ -8,11 +8,21 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import Bunch
 
 from ML.params import middle_layer, use_sigmoid, iris_default_relations, mnist_default_relations, mnist_krone_relations, \
-    iris_krone_relations, k, nr_runs
+    iris_krone_relations, k, nr_runs, use_index_join
 
 
 def insert(db_connection: duckdb.DuckDBPyConnection, h_table: str, h_vector: np.ndarray) -> str:
-    db_connection.execute(f"CREATE OR REPLACE TABLE {h_table} (row INTEGER, col INTEGER, val DOUBLE)")
+    db_connection.execute(
+        f"CREATE OR REPLACE TABLE {h_table} (row INTEGER, col INTEGER, val DOUBLE)"
+    )
+    if use_index_join:
+        # Create indices on row and col
+        db_connection.execute(
+            f"DROP INDEX IF EXISTS {h_table}_row_idx;"
+            f"DROP INDEX IF EXISTS {h_table}_col_idx;"
+            f"CREATE INDEX {h_table}_row_idx ON {h_table}(row);"
+            f"CREATE INDEX {h_table}_col_idx ON {h_table}(col);"
+        )
     row = 0
     for val in h_vector:
         db_connection.execute(f"INSERT INTO {h_table} VALUES ({row}, 0, {val})")
@@ -35,6 +45,7 @@ def add_bias_neuron(z_table: str) -> str:
 def linear_default(w_table: str, h_table: str) -> str:
     # Matrix multiplication: WZ
     query = matmul(w_table, h_table)
+    print(query)
     return query
 
 
@@ -75,6 +86,7 @@ def linear_krone(a_table: str, b_table: str, h_table: str) -> str:
              f"0 AS col,\n" \
              f"val FROM BVHA\n" \
              f"ORDER BY row\n"
+    print(query)
     return query
 
 
@@ -105,22 +117,30 @@ def run_default(db_connection: duckdb.DuckDBPyConnection, x_vector: np.ndarray, 
         raise ValueError(f"Unknown model {model}")
 
     # Load the input
+    start = time.time()
     x = insert(db_connection, f"X", x_vector)
+    print(f"Inserting X took {time.time() - start} seconds")
 
     # Inference query
     # FC1
+    start = time.time()
     z1 = execute(db_connection, f"Z1", linear_default(relations[0], x))
     h1_ = execute(db_connection, f"H1_", activation(z1))
     h1 = execute(db_connection, f"H1", add_bias_neuron(h1_))
+    print(f"FC1 took {time.time() - start} seconds")
 
     # FC2
+    start = time.time()
     z2 = execute(db_connection, f"Z2", linear_default(relations[1], h1))
     h2_ = execute(db_connection, f"H2_", activation(z2))
     h2 = execute(db_connection, f"H2", add_bias_neuron(h2_))
+    print(f"FC2 took {time.time() - start} seconds")
 
     # FC3
+    start = time.time()
     z3 = execute(db_connection, f"Z3", linear_default(relations[2], h2))
     y = execute(db_connection, f"H3", softmax(z3))
+    print(f"FC3 took {time.time() - start} seconds")
 
     return y
 
@@ -162,13 +182,19 @@ def inference(dataset: Bunch, model: str):
     X = scaler.fit_transform(X)
 
     # Split the dataset into training and testing
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     # Take first sample as test
-    # X_test = X[:1]
-    # y_test = y[:1]
+    X_test = X[:1]
+    y_test = y[:1]
 
     con = duckdb.connect(f'data/{model}_{middle_layer[0]}x{middle_layer[1]}.db', read_only=False)
+
+    # Pragma settings
+    con.execute(
+        "PRAGMA threads=10;"
+        "PRAGMA force_index_join;"
+    )
 
     predictions_default = []
     predictions_krone = []

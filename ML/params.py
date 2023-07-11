@@ -1,10 +1,11 @@
 middle_layer = (1000, 1000)
 use_sigmoid = False
 
-k = 1
+k = 4
 max_k = 10
 
 nr_runs = 1
+use_index_join = False
 
 fc_layers = [('fc1.weight', 'fc1.bias'),
              ('fc2.weight', 'fc2.bias'),
