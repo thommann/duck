@@ -5,12 +5,13 @@ from ML.params import middle_layer, fc_layers, max_k
 from src.kronecker import svd, compute_shapes, kronecker_decomposition
 
 
-def calculate_kronecker(matrix, k=1, cc=False) -> tuple[list[np.ndarray], list[np.ndarray]]:
+def calculate_kronecker(matrix: np.ndarray, k=1, cc=False) -> \
+        tuple[list[np.ndarray], list[np.ndarray], tuple[int, int], tuple[int, int]]:
     shape_c = matrix.shape
     shape_a, shape_b = compute_shapes(shape_c, compress_cols=cc)
     u, s, vh = svd(matrix, shape_a)
     a, b = kronecker_decomposition(u, s, vh, shape_a, shape_b, k=k)
-    return a, b
+    return a, b, shape_a, shape_b
 
 
 def to_tensor(matrix: np.ndarray, rank: int = None) -> np.ndarray:
@@ -30,7 +31,7 @@ def extract_parameters(model: str):
         weight = np.atleast_2d(state_dict[w]).T
         bias = np.atleast_2d(state_dict[b])
         fc = np.vstack((weight, bias))
-        a, b = calculate_kronecker(fc, k=max_k, cc=False)
+        a, b, _, _ = calculate_kronecker(fc, k=max_k, cc=False)
         fc_transpose = fc.T
 
         # Save to file in tensor notation

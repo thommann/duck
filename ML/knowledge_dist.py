@@ -3,9 +3,9 @@ from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from ML.calculate_kronecker import do_decomposition
+from ML.extract_parameters import calculate_kronecker
 from ML.model import KroneNet
-from ML.params import middle_layer, middle_layer_a, middle_layer_b, use_sigmoid
+from ML.params import middle_layer, use_sigmoid
 
 
 def test(model: KroneNet, x: torch.Tensor, y: torch.Tensor) -> None:
@@ -20,21 +20,6 @@ def test(model: KroneNet, x: torch.Tensor, y: torch.Tensor) -> None:
         correct += (predicted == y).sum().item()
 
     print(f"Accuracy: {100 * correct / total:.2f}%")
-
-
-def krone_input(X: torch.Tensor):
-    X_krone_a = []
-    X_krone_b = []
-    for f_vec in X:
-        f_vec_a, f_vec_b = do_decomposition(f_vec.numpy())
-        f_vec_a, f_vec_b = torch.tensor(f_vec_a), torch.tensor(f_vec_b)
-        f_vec_a = torch.squeeze(f_vec_a, dim=1)
-        f_vec_b = torch.squeeze(f_vec_b, dim=1)
-        X_krone_a.append(f_vec_a)
-        X_krone_b.append(f_vec_b)
-
-    X_krone = torch.stack((torch.stack(X_krone_a, dim=0), torch.stack(X_krone_b, dim=0)), dim=0)
-    return X_krone
 
 
 # Load the dataset
@@ -58,8 +43,20 @@ X = torch.tensor(X, dtype=torch.float)
 y = torch.tensor(y, dtype=torch.long)
 
 # Load iris model
-model = KroneNet(middle_layer_a, middle_layer_b, sigmoid=use_sigmoid)
-model.load_state_dict(torch.load(f'data/iris-model{middle_layer[0]}x{middle_layer[1]}krone.pth'))
+state_dict = torch.load(f'data/iris-model{middle_layer[0]}x{middle_layer[1]}.pth')
+krone_state_dict = {}
+for key, value in state_dict.items():
+    if key.endswith("weight"):
+        value_a, value_b, shape_a, shape_b = calculate_kronecker(value.numpy(), k=1, cc=True)
+        tensor_a, tensor_b = torch.tensor(value_a), torch.tensor(value_b)
+
+        krone_state_dict[key + "_a"] = tensor_a
+        krone_state_dict[key + "_b"] = tensor_b
+    else:
+        krone_state_dict[key] = value
+
+model = KroneNet(middle_layer_a, middle_layer_b)
+model.load_state_dict(krone_state_dict)
 
 # Calculate the Kronecker product of the input
 X_krone = krone_input(X)
