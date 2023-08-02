@@ -31,3 +31,6 @@ data/plots/*
 
 ML/data/*
 !ML/data/.gitkeep
+
+ML/input/*
+!ML/input/.gitkeep
