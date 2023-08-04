@@ -2,7 +2,7 @@ import argparse
 
 import numpy as np
 
-from src.kronecker import kronecker_decomposition, svd, compute_shapes
+from src.kronecker import kronecker_decomposition, massaged_svd, compute_shapes
 
 
 def try_svd(suffix: str, initialized: bool, matrix: np.ndarray, shape_a: tuple[int, int]):
@@ -15,7 +15,7 @@ def try_svd(suffix: str, initialized: bool, matrix: np.ndarray, shape_a: tuple[i
         vh_mat = np.loadtxt(f"{prefix}VH{suffix}", delimiter=',')
         initialized = True
     except OSError:
-        u_mat, s_vec, vh_mat = svd(matrix, shape_a)
+        u_mat, s_vec, vh_mat = massaged_svd(matrix, shape_a)
         np.savetxt(f"{prefix}U{suffix}", u_mat, delimiter=',')
         np.savetxt(f"{prefix}S{suffix}", s_vec, delimiter=',')
         np.savetxt(f"{prefix}VH{suffix}", vh_mat, delimiter=',')
