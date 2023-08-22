@@ -27,6 +27,10 @@ def massage(matrix: np.ndarray, shape_a: tuple[int, int]) -> np.ndarray:
     if not isinstance(shape_a, tuple) or len(shape_a) != 2:
         raise ValueError('shape_a must be a tuple of length 2.')
 
+    # matrix must be a 2D matrix
+    if len(matrix.shape) != 2:
+        raise ValueError('matrix must be a 2D matrix.')
+
     return np.vstack(
         [vec(block) for col in np.split(matrix, shape_a[1], axis=1) for block in np.split(col, shape_a[0], 0)])
 
